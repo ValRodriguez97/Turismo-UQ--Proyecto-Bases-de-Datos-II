@@ -6,6 +6,10 @@
 --
 -- Orden de ejecucion: este script se ejecuta DESPUES de Script.sql (DDL)
 -- y de Carga_TurismoUQ.sql (datos).
+--
+-- Raquel Lopez Aristizabal
+-- Valentina Gonzalez Diaz
+-- Valentina Rodriguez Castro
 -- =================================================================================
 
 SET DEFINE ON

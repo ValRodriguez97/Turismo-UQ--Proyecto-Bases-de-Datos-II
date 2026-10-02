@@ -2,6 +2,10 @@
 -- TurismoUQ 
 -- Base de datos para la gestión de reservas de alokamientos
 -- turísticos en el Quindío.
+--
+-- Raquel Lopez Aristizabal
+-- Valentina Gonzalez Diaz
+-- Valentina Rodriguez Castro
 -- =============================================================
 
 -- 1. MUNICIPIO

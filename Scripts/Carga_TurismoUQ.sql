@@ -1,5 +1,8 @@
 -- =============================================================
 -- TurismoUQ 
+-- Raquel Lopez Aristizabal
+-- Valentina Gonzalez Diaz
+-- Valentina Rodríguez Castro
 -- =============================================================
 SET DEFINE OFF;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
