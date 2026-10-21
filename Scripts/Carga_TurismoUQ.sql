@@ -158,12 +158,12 @@ BEGIN
 END;
 /
 
--- ---------- 7. HABITACION (~420) ----------
+-- ---------- 7. HABITACION (hoteles 30-40, fincas 3-5, glamping 4-8, hostal 5-10) ----------
 DECLARE
   v_n NUMBER; v_tipo_h VARCHAR2(15); v_cap NUMBER; v_r NUMBER; v_id NUMBER := 0;
 BEGIN
   FOR a IN (SELECT id_alojamiento, id_tipo_alojamiento FROM alojamiento) LOOP
-    v_n := CASE a.id_tipo_alojamiento WHEN 1 THEN TRUNC(DBMS_RANDOM.VALUE(3,6)) WHEN 2 THEN TRUNC(DBMS_RANDOM.VALUE(10,19)) WHEN 3 THEN TRUNC(DBMS_RANDOM.VALUE(4,9)) ELSE TRUNC(DBMS_RANDOM.VALUE(5,11)) END;
+    v_n := CASE a.id_tipo_alojamiento WHEN 1 THEN TRUNC(DBMS_RANDOM.VALUE(3,6)) WHEN 2 THEN TRUNC(DBMS_RANDOM.VALUE(30,41)) WHEN 3 THEN TRUNC(DBMS_RANDOM.VALUE(4,9)) ELSE TRUNC(DBMS_RANDOM.VALUE(5,11)) END;
     FOR h IN 1..v_n LOOP
       v_r := DBMS_RANDOM.VALUE;
       IF v_r < 0.35 THEN v_tipo_h := 'sencilla'; v_cap := TRUNC(DBMS_RANDOM.VALUE(1,3));
@@ -179,7 +179,6 @@ BEGIN
   DBMS_OUTPUT.PUT_LINE('habitacion OK');
 END;
 /
-
 -- ---------- 8. TARIFA ----------
 DECLARE
   v_id NUMBER := 0;
@@ -295,28 +294,89 @@ BEGIN
 END;
 /
 
--- ---------- 12. RESERVA + RESERVA_HABITACION (25000, estacional, con control de solape) ----------
+-- ---------- 12. RESERVA + RESERVA_HABITACION (25000, estacional, SIN solapes) ----------
+-- Regla 1.3: una habitacion no puede estar en dos reservas activas (pendiente,
+-- confirmada o completada) con noches en comun. Las canceladas no ocupan la habitacion.
+-- La habitacion se sortea entre TODAS las habitaciones, asi los hoteles grandes reciben
+-- mas reservas que las fincas pequenas y la ocupacion por habitacion queda pareja.
+-- El cruce se valida contra el rango completo de la reserva (checkin-checkout), que
+-- contiene a todas sus lineas; por eso no hay solape ni a nivel de reserva ni de linea.
 DECLARE
   c_hoy CONSTANT DATE := DATE '2026-09-30';
   TYPE t_num IS TABLE OF NUMBER INDEX BY PLS_INTEGER;
   TYPE t_dat IS TABLE OF DATE INDEX BY PLS_INTEGER;
   TYPE t_chr IS TABLE OF VARCHAR2(12) INDEX BY PLS_INTEGER;
   v_hid t_num; v_haloj t_num; v_hcap t_num; v_nhab NUMBER;
+  v_ini t_num; v_cnt t_num; -- por alojamiento: posicion de su primera habitacion y cuantas tiene
   v_tid t_num; v_tnom t_chr; v_tini t_dat; v_tfin t_dat;
-  TYPE t_rng IS RECORD (ini DATE, fin DATE, est VARCHAR2(12));
+  TYPE t_rng IS RECORD (ini DATE, fin DATE);
   TYPE t_lst IS TABLE OF t_rng INDEX BY PLS_INTEGER;
   TYPE t_map IS TABLE OF t_lst INDEX BY PLS_INTEGER;
-  v_ocup t_map; v_tmp t_lst;
+  v_ocup t_map; v_tmp t_lst; v_rec t_rng;
   v_rh NUMBER := 0; v_mes NUMBER; v_anio NUMBER; v_r NUMBER;
   v_in DATE; v_out DATE; v_noches NUMBER; v_fres DATE; v_est VARCHAR2(12);
-  v_aloj NUMBER; v_nlin NUMBER; v_hab NUMBER; v_cap NUMBER;
+  v_aloj NUMBER; v_nlin NUMBER; v_hab NUMBER;
   v_lin DATE; v_lout DATE; v_pax NUMBER; v_val NUMBER; v_d DATE;
-  v_choca BOOLEAN; v_try NUMBER; v_idx NUMBER; v_prec NUMBER; v_ok BOOLEAN; v_j NUMBER; v_used t_num;
+  v_try NUMBER; v_idx NUMBER; v_prec NUMBER; v_ok BOOLEAN; v_used t_num; v_rid_actual NUMBER;
+
+  -- TRUE si la habitacion no tiene ninguna reserva activa que cruce el rango [p_ini, p_fin)
+  FUNCTION libre(p_hab NUMBER, p_ini DATE, p_fin DATE) RETURN BOOLEAN IS
+  BEGIN
+    IF NOT v_ocup.EXISTS(p_hab) THEN RETURN TRUE; END IF;
+    FOR k IN 1..v_ocup(p_hab).COUNT LOOP
+      IF NOT (p_fin <= v_ocup(p_hab)(k).ini OR p_ini >= v_ocup(p_hab)(k).fin) THEN
+        RETURN FALSE;
+      END IF;
+    END LOOP;
+    RETURN TRUE;
+  END;
+
+  -- Fechas de la linea: dentro del rango de la reserva (alguien puede llegar un dia despues o irse antes)
+  PROCEDURE fechas_linea IS
+  BEGIN
+    v_lin  := v_in  + CASE WHEN v_noches > 2 AND DBMS_RANDOM.VALUE < 0.3  THEN 1 ELSE 0 END;
+    v_lout := v_out - CASE WHEN v_noches > 3 AND DBMS_RANDOM.VALUE < 0.25 THEN 1 ELSE 0 END;
+    IF v_lout <= v_lin THEN v_lin := v_in; v_lout := v_out; END IF;
+  END;
+
+  -- Inserta la linea (valor noche por noche) y, si la reserva no esta cancelada, ocupa la habitacion
+  PROCEDURE add_linea(p_hab NUMBER, p_cap NUMBER, p_lin DATE, p_lout DATE) IS
+  BEGIN
+    v_used(p_hab) := 1;
+    v_pax := TRUNC(DBMS_RANDOM.VALUE(1, p_cap+1));
+    v_val := 0; v_d := p_lin;
+    WHILE v_d < p_lout LOOP
+      BEGIN
+        SELECT t.precio_noche INTO v_prec FROM tarifa t WHERE t.id_habitacion = p_hab
+          AND t.id_temporada = (SELECT s.id_temporada FROM temporada s WHERE v_d BETWEEN s.fecha_inicio AND s.fecha_fin AND ROWNUM = 1)
+          AND ROWNUM = 1;
+        v_val := v_val + v_prec;
+      EXCEPTION WHEN NO_DATA_FOUND THEN v_val := v_val + 150000;
+      END;
+      v_d := v_d + 1;
+    END LOOP;
+    v_rh := v_rh + 1;
+    INSERT INTO reserva_habitacion (id_reserva_hab, id_reserva, id_habitacion, fecha_checkin_linea, fecha_checkout_linea, num_huespedes, valor_calculado)
+    VALUES (v_rh, v_rid_actual, p_hab, p_lin, p_lout, v_pax, v_val);
+    IF v_est <> 'cancelada' THEN
+      v_rec.ini := v_in; v_rec.fin := v_out;
+      IF v_ocup.EXISTS(p_hab) THEN
+        v_ocup(p_hab)(v_ocup(p_hab).COUNT+1) := v_rec;
+      ELSE
+        v_tmp.DELETE; v_tmp(1) := v_rec; v_ocup(p_hab) := v_tmp;
+      END IF;
+    END IF;
+  END;
 BEGIN
   SELECT id_habitacion, id_alojamiento, capacidad_max BULK COLLECT INTO v_hid, v_haloj, v_hcap FROM habitacion ORDER BY id_habitacion;
   v_nhab := v_hid.COUNT;
+  FOR i IN 1..v_nhab LOOP
+    IF NOT v_ini.EXISTS(v_haloj(i)) THEN v_ini(v_haloj(i)) := i; v_cnt(v_haloj(i)) := 0; END IF;
+    v_cnt(v_haloj(i)) := v_cnt(v_haloj(i)) + 1;
+  END LOOP;
   SELECT id_temporada, nombre, fecha_inicio, fecha_fin BULK COLLECT INTO v_tid, v_tnom, v_tini, v_tfin FROM temporada ORDER BY id_temporada;
   FOR r IN 1..25000 LOOP
+    v_rid_actual := r;
     v_r := DBMS_RANDOM.VALUE(0,26.5);
     IF v_r < 3 THEN v_mes := 1; ELSIF v_r < 4 THEN v_mes := 2; ELSIF v_r < 6 THEN v_mes := 3;
     ELSIF v_r < 9 THEN v_mes := 4; ELSIF v_r < 10.5 THEN v_mes := 5; ELSIF v_r < 13.5 THEN v_mes := 6;
@@ -333,62 +393,40 @@ BEGIN
     IF v_out <= c_hoy THEN v_est := CASE WHEN DBMS_RANDOM.VALUE < 0.13 THEN 'cancelada' ELSE 'completada' END;
     ELSIF v_in > c_hoy THEN v_est := CASE WHEN DBMS_RANDOM.VALUE < 0.55 THEN 'pendiente' ELSE 'confirmada' END;
     ELSE v_est := 'confirmada'; END IF;
-    v_aloj := TRUNC(DBMS_RANDOM.VALUE(1,61));
+    v_r := DBMS_RANDOM.VALUE;
+    IF v_r < 0.85 THEN v_nlin := 1; ELSIF v_r < 0.97 THEN v_nlin := 2; ELSE v_nlin := 3; END IF;
+
+    -- Linea 1: busca una habitacion libre en esas fechas (hasta 60 intentos)
+    v_ok := FALSE; v_try := 0;
+    WHILE NOT v_ok AND v_try < 60 LOOP
+      v_try := v_try + 1;
+      v_idx := TRUNC(DBMS_RANDOM.VALUE(1, v_nhab+1));
+      v_hab := v_hid(v_idx);
+      IF v_est = 'cancelada' OR libre(v_hab, v_in, v_out) THEN v_ok := TRUE; END IF;
+    END LOOP;
+    IF NOT v_ok THEN v_est := 'cancelada'; END IF; -- sin hueco: queda cancelada y no bloquea nada
+    fechas_linea;
+    v_aloj := v_haloj(v_idx);
     v_used.DELETE; -- habitaciones ya usadas por esta reserva (respeta la UQ)
     INSERT INTO reserva (id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado)
     VALUES (r, TRUNC(DBMS_RANDOM.VALUE(1,3001)), v_fres, v_in, v_out, v_est);
-    v_r := DBMS_RANDOM.VALUE;
-    IF v_r < 0.85 THEN v_nlin := 1; ELSIF v_r < 0.97 THEN v_nlin := 2; ELSE v_nlin := 3; END IF;
-    FOR l IN 1..v_nlin LOOP
-      v_try := 0; v_ok := FALSE;
-      WHILE NOT v_ok AND v_try < 6 LOOP
+    add_linea(v_hab, v_hcap(v_idx), v_lin, v_lout);
+
+    -- Lineas 2 y 3 (si las hay): habitaciones libres del MISMO alojamiento
+    FOR l IN 2..v_nlin LOOP
+      v_ok := FALSE; v_try := 0;
+      WHILE NOT v_ok AND v_try < 20 LOOP
         v_try := v_try + 1;
-        v_idx := TRUNC(DBMS_RANDOM.VALUE(1, v_nhab+1));
-        IF v_haloj(v_idx) != v_aloj THEN CONTINUE; END IF;
-        IF v_used.EXISTS(v_hid(v_idx)) THEN CONTINUE; END IF; -- ya usada en esta reserva
-        v_hab := v_hid(v_idx); v_cap := v_hcap(v_idx);
-        v_lin := v_in + CASE WHEN v_noches > 2 AND DBMS_RANDOM.VALUE < 0.3 THEN 1 ELSE 0 END;
-        v_lout := v_out - CASE WHEN v_noches > 3 AND DBMS_RANDOM.VALUE < 0.25 THEN 1 ELSE 0 END;
-        IF v_lout <= v_lin THEN v_lin := v_in; v_lout := v_out; END IF;
-        v_choca := FALSE;
-        IF v_est IN ('confirmada','completada') AND v_ocup.EXISTS(v_hab) THEN
-          FOR k IN 1..v_ocup(v_hab).COUNT LOOP
-            IF v_ocup(v_hab)(k).est IN ('confirmada','completada')
-               AND NOT (v_lout <= v_ocup(v_hab)(k).ini OR v_lin >= v_ocup(v_hab)(k).fin) THEN
-              v_choca := TRUE; EXIT;
-            END IF;
-          END LOOP;
+        v_idx := v_ini(v_aloj) + TRUNC(DBMS_RANDOM.VALUE(0, v_cnt(v_aloj)));
+        v_hab := v_hid(v_idx);
+        IF NOT v_used.EXISTS(v_hab) THEN
+          IF v_est = 'cancelada' OR libre(v_hab, v_in, v_out) THEN v_ok := TRUE; END IF;
         END IF;
-        IF NOT v_choca THEN v_ok := TRUE; END IF;
       END LOOP;
-      IF NOT v_ok THEN -- fallback: primera habitación LIBRE del alojamiento
-        FOR v_j IN 1..v_nhab LOOP
-          IF v_haloj(v_j) = v_aloj AND NOT v_used.EXISTS(v_hid(v_j)) THEN
-            v_hab := v_hid(v_j); v_cap := v_hcap(v_j); v_ok := TRUE; EXIT;
-          END IF;
-        END LOOP;
-        v_lin := v_in; v_lout := v_out;
+      IF v_ok THEN
+        fechas_linea;
+        add_linea(v_hab, v_hcap(v_idx), v_lin, v_lout);
       END IF;
-      IF NOT v_ok THEN CONTINUE; END IF; -- sin habitaciones libres: se omite la línea
-      v_used(v_hab) := 1;
-      v_pax := TRUNC(DBMS_RANDOM.VALUE(1, v_cap+1));
-      v_val := 0; v_d := v_lin;
-      WHILE v_d < v_lout LOOP
-        BEGIN
-          SELECT t.precio_noche INTO v_prec FROM tarifa t WHERE t.id_habitacion = v_hab
-            AND t.id_temporada = (SELECT s.id_temporada FROM temporada s WHERE v_d BETWEEN s.fecha_inicio AND s.fecha_fin AND ROWNUM = 1)
-            AND ROWNUM = 1;
-          v_val := v_val + v_prec;
-        EXCEPTION WHEN NO_DATA_FOUND THEN v_val := v_val + 150000;
-        END;
-        v_d := v_d + 1;
-      END LOOP;
-      v_rh := v_rh + 1;
-      INSERT INTO reserva_habitacion (id_reserva_hab, id_reserva, id_habitacion, fecha_checkin_linea, fecha_checkout_linea, num_huespedes, valor_calculado)
-      VALUES (v_rh, r, v_hab, v_lin, v_lout, v_pax, v_val);
-      v_tmp(1).ini := v_lin; v_tmp(1).fin := v_lout; v_tmp(1).est := v_est;
-      IF v_ocup.EXISTS(v_hab) THEN v_ocup(v_hab)(v_ocup(v_hab).COUNT+1) := v_tmp(1);
-      ELSE v_ocup(v_hab) := v_tmp; END IF;
     END LOOP;
     IF MOD(r,1000)=0 THEN COMMIT; END IF;
   END LOOP;
@@ -396,6 +434,7 @@ BEGIN
   DBMS_OUTPUT.PUT_LINE('reserva OK, lineas: ' || v_rh);
 END;
 /
+
 
 -- ---------- 13. RESERVA_SERVICIO (40000, solo servicios del alojamiento donde se hospeda) ----------
 DECLARE
@@ -440,7 +479,7 @@ DECLARE
   TYPE t_chr IS TABLE OF VARCHAR2(20) INDEX BY PLS_INTEGER;
   TYPE t_dat IS TABLE OF DATE INDEX BY PLS_INTEGER;
   v_rid t_num; v_rest t_chr; v_rfres t_dat; v_rin t_dat;
-  v_met t_chr; v_pago NUMBER := 0; v_tot NUMBER; v_r NUMBER; v_ant NUMBER; v_cid NUMBER; v_cfr DATE; v_cin DATE; v_mtd VARCHAR2(20);
+  v_met t_chr; v_pago NUMBER := 0; v_tot NUMBER; v_r NUMBER; v_ant NUMBER; v_cid NUMBER; v_cfr DATE; v_cin DATE; v_mtd VARCHAR2(20); v_dias NUMBER;
 BEGIN
   SELECT id_reserva, estado, fecha_reserva, checkin BULK COLLECT INTO v_rid, v_rest, v_rfres, v_rin FROM reserva ORDER BY id_reserva;
   DECLARE TYPE m IS TABLE OF NUMBER INDEX BY PLS_INTEGER; v_e m; v_s m;
@@ -481,15 +520,18 @@ BEGIN
           INSERT INTO pago (id_pago, fecha_pago, monto, metodo_pago, estado_pago, id_reserva)
           VALUES (v_pago, v_cfr, ROUND(v_tot * 0.30, -2), v_mtd, 'exitoso', v_cid);
         END IF;
-      ELSE -- cancelada: anticipo exitoso + reembolso del 80% de lo pagado 
+      ELSE -- cancelada: anticipo exitoso; reembolso del 80% SOLO si cancelo con MAS de 5 dias de anticipacion (seccion 1.4)
         IF v_r < 0.80 THEN
           v_ant := ROUND(v_tot * 0.40, -2);
           v_pago := v_pago + 1;
           INSERT INTO pago (id_pago, fecha_pago, monto, metodo_pago, estado_pago, id_reserva)
-          VALUES (v_pago, v_cfr + TRUNC(DBMS_RANDOM.VALUE(0,4)), v_ant, v_mtd, 'exitoso', v_cid);
-          v_pago := v_pago + 1;
-          INSERT INTO pago (id_pago, fecha_pago, monto, metodo_pago, estado_pago, id_reserva)
-          VALUES (v_pago, v_cfr + 6, ROUND(v_ant * 0.80, -2), v_mtd, 'reembolsado', v_cid);
+          VALUES (v_pago, v_cfr, v_ant, v_mtd, 'exitoso', v_cid);
+          IF v_cin - v_cfr > 5 AND DBMS_RANDOM.VALUE < 0.65 THEN
+            v_dias := TRUNC(DBMS_RANDOM.VALUE(6, v_cin - v_cfr + 1)); -- dias de anticipacion: de 6 en adelante
+            v_pago := v_pago + 1;
+            INSERT INTO pago (id_pago, fecha_pago, monto, metodo_pago, estado_pago, id_reserva)
+            VALUES (v_pago, v_cin - v_dias, ROUND(v_ant * 0.80, -2), v_mtd, 'reembolsado', v_cid);
+          END IF; -- cancelaciones con 5 dias o menos: no hay reembolso, se conserva el anticipo
         ELSE
           v_pago := v_pago + 1;
           INSERT INTO pago (id_pago, fecha_pago, monto, metodo_pago, estado_pago, id_reserva)
@@ -540,5 +582,25 @@ BEGIN
   cnt('ALOJAMIENTO'); cnt('HABITACION'); cnt('TARIFA'); cnt('CLIENTE'); cnt('SERVICIO');
   cnt('USUARIO_SISTEMA'); cnt('RESERVA'); cnt('RESERVA_HABITACION'); cnt('RESERVA_SERVICIO');
   cnt('PAGO'); cnt('RESENA');
+END;
+/
+
+-- ---------- 17. Verificacion de reglas de negocio ----------
+DECLARE
+  v_sol NUMBER; v_ref NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_sol
+    FROM reserva_habitacion a
+    JOIN reserva ra ON ra.id_reserva = a.id_reserva
+    JOIN reserva_habitacion b ON b.id_habitacion = a.id_habitacion AND b.id_reserva_hab > a.id_reserva_hab
+    JOIN reserva rb ON rb.id_reserva = b.id_reserva
+   WHERE ra.estado <> 'cancelada' AND rb.estado <> 'cancelada'
+     AND a.fecha_checkin_linea < b.fecha_checkout_linea
+     AND b.fecha_checkin_linea < a.fecha_checkout_linea;
+  DBMS_OUTPUT.PUT_LINE('Solapes de habitacion (debe ser 0): ' || v_sol);
+  SELECT COUNT(*) INTO v_ref
+    FROM pago p JOIN reserva r ON r.id_reserva = p.id_reserva
+   WHERE p.estado_pago = 'reembolsado' AND r.checkin - p.fecha_pago <= 5;
+  DBMS_OUTPUT.PUT_LINE('Reembolsos con 5 dias o menos (debe ser 0): ' || v_ref);
 END;
 /
