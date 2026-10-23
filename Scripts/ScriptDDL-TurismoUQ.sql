@@ -419,3 +419,24 @@ ALTER TABLE auditoria_tarifa
 ALTER TABLE auditoria_tarifa
     ADD CONSTRAINT auditoriatarifa_usuario_fk FOREIGN KEY (id_usuario)
     REFERENCES usuario_sistema (id_usuario);
+
+-- =============================================================
+-- Comentarios de tabla (COMMENT ON TABLE)
+-- =============================================================
+COMMENT ON TABLE municipio IS 'Los 12 municipios del Quindio donde se ubican los alojamientos.';
+COMMENT ON TABLE tipo_alojamiento IS 'Catalogo de tipos de alojamiento: finca cafetera, hotel, glamping, hostal.';
+COMMENT ON TABLE alojamiento IS 'Establecimiento que ofrece hospedaje; pertenece a un municipio y a un tipo, y se autoasigna estrellas.';
+COMMENT ON TABLE habitacion IS 'Habitacion de un alojamiento con numero unico dentro de el, capacidad maxima y tipo (sencilla, doble, suite, cabana).';
+COMMENT ON TABLE temporada IS 'Rango de fechas de temporada alta, media o baja definido por ano; una estadia puede cruzar dos temporadas.';
+COMMENT ON TABLE tarifa IS 'Precio por noche de una habitacion en una temporada; una fila por cada combinacion habitacion x temporada.';
+COMMENT ON TABLE cliente IS 'Persona que reserva; guarda documento, contacto y ciudad de origen.';
+COMMENT ON TABLE reserva IS 'Encabezado de la reserva de un cliente: fechas generales, estado y fecha en que se hizo.';
+COMMENT ON TABLE reserva_habitacion IS 'Linea de reserva: una habitacion dentro de una reserva, con sus propias fechas, huespedes y valor calculado noche por noche.';
+COMMENT ON TABLE pago IS 'Pago o abono de una reserva con fecha, monto, metodo y estado; una reserva puede tener varios pagos.';
+COMMENT ON TABLE servicio IS 'Servicio complementario (desayuno, tour, spa, etc.) con precio, propio de un alojamiento especifico.';
+COMMENT ON TABLE reserva_servicio IS 'Servicios contratados en una reserva: cantidad y precio unitario vigente al contratarlo.';
+COMMENT ON TABLE resena IS 'Resena de un cliente sobre un alojamiento tras una reserva completada: calificacion de 1 a 5 y comentario opcional.';
+COMMENT ON TABLE usuario_sistema IS 'Usuario interno de la plataforma (administrador, encargado, recepcion, auditor); tiene un rol y opcionalmente un alojamiento.';
+COMMENT ON TABLE rol IS 'Roles de los usuarios internos; base de los privilegios de la Entrega 3.';
+COMMENT ON TABLE ciudad IS 'Ciudades de origen de los clientes, dentro y fuera del Quindio.';
+COMMENT ON TABLE auditoria_tarifa IS 'Bitacora de cambios de precio en TARIFA: quien, cuando, valor anterior y nuevo.';
