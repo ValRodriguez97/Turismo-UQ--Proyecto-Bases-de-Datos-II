@@ -1,6 +1,6 @@
 -- =============================================================
 -- TurismoUQ 
--- Base de datos para la gestión de reservas de alokamientos
+-- Base de datos para la gestión de reservas de alojamientos
 -- turísticos en el Quindío.
 --
 -- Raquel Lopez Aristizabal
@@ -9,7 +9,7 @@
 -- =============================================================
 
 -- 1. MUNICIPIO
--- Catálogo de municipios del Quindío donde se ubican os alojameientos.
+-- Catálogo de municipios del Quindío donde se ubican os alojamientos.
 -- El nombre del municipio es único para evitar duplicados.
 --
 CREATE TABLE municipio
@@ -38,7 +38,7 @@ ALTER TABLE tipo_alojamiento
 
 -- 3. ALOJAMIENTO
 -- Tabla principal que guarda los datos de contacto, la calificación oficial en estrellas, 
--- la fecha que que se registro el alojamiento en el sistema, el municipio donde está ubicado y de 
+-- la fechas que se registro el alojamiento en el sistema, el municipio donde está ubicado y de 
 -- qué tipo es. La calificación en estrellas debe estar entre 1 y 5.
 --
 CREATE TABLE alojamiento
@@ -97,7 +97,7 @@ ALTER TABLE temporada
 
 -- 6. TARIFA
 -- Precio por noche de una habitación en una temporada específica. Es una tabla intermedia entre habitación
--- y teporada: cada habitación puede tener varias tarifas según la temporada, y cada temporada puede tener 
+-- y temporada: cada habitación puede tener varias tarifas según la temporada, y cada temporada puede tener 
 -- tarifas distintas para cada habitación. El precio debe ser mayor a cero.
 --
 CREATE TABLE tarifa
@@ -136,7 +136,7 @@ ALTER TABLE cliente
 
 -- 8. RESERVA
 -- Guarda la información de quién hizo la reserva, cuándo la hizo, las fechas generales de 
--- checkin y checkouy y el estado.
+-- checkin y checkout y el estado.
 --
 CREATE TABLE reserva
     (
@@ -155,7 +155,7 @@ ALTER TABLE reserva
 
 -- 9. RESERVA_HABITACION
 -- Detalle de las habitaciones reservadas con fechas propias por línea, número de huéspedes y 
--- el valor valculado. Es una tabla intermedia entre reserva y habitación. El número de huéspedes 
+-- el valor calculado. Es una tabla intermedia entre reserva y habitación. El número de huéspedes 
 -- debe ser mayor a cero y una misma habitación no puede reservarse dos veces en la misma reserva.
 --
 CREATE TABLE reserva_habitacion
@@ -427,7 +427,7 @@ COMMENT ON TABLE municipio IS 'Los 12 municipios del Quindio donde se ubican los
 COMMENT ON TABLE tipo_alojamiento IS 'Catalogo de tipos de alojamiento: finca cafetera, hotel, glamping, hostal.';
 COMMENT ON TABLE alojamiento IS 'Establecimiento que ofrece hospedaje; pertenece a un municipio y a un tipo, y se autoasigna estrellas.';
 COMMENT ON TABLE habitacion IS 'Habitacion de un alojamiento con numero unico dentro de el, capacidad maxima y tipo (sencilla, doble, suite, cabana).';
-COMMENT ON TABLE temporada IS 'Rango de fechas de temporada alta, media o baja definido por ano; una estadia puede cruzar dos temporadas.';
+COMMENT ON TABLE temporada IS 'Rango de fechas de temporada alta, media o baja definido por anio; una estadia puede cruzar dos temporadas.';
 COMMENT ON TABLE tarifa IS 'Precio por noche de una habitacion en una temporada; una fila por cada combinacion habitacion x temporada.';
 COMMENT ON TABLE cliente IS 'Persona que reserva; guarda documento, contacto y ciudad de origen.';
 COMMENT ON TABLE reserva IS 'Encabezado de la reserva de un cliente: fechas generales, estado y fecha en que se hizo.';

@@ -54,7 +54,21 @@ ORDER BY municipio, anio;
 -- =================================================================================
 -- CONSULTA 2 - INGRESOS POR MUNICIPIO, TIPO DE ALOJAMIENTO Y TEMPORADA
 --              (ROLLUP + GROUPING)
+-- La temporada se determina NOCHE POR NOCHE: cada linea de reserva se expande en sus noches
+-- y cada noche se cobra con la tarifa de la temporada en que cae.
 -- =================================================================================
+WITH nums AS (
+     SELECT LEVEL -1 AS n
+     FROM dual
+     CONNECT BY LEVEL <= (SELECT MAX(fecha_checkout_linea - fecha_checkin_linea)
+          FROM reserva_habitacion)
+), noches AS (
+     SELECT rh.id_habitacion, rh.fecha_checkin_linea + nums.n AS fecha_noche
+     FROM reserva_habitacion rh
+     JOIN reserva r ON r.id_reserva = rh.id_reserva
+     JOIN nums ON nums.n < rh.fecha_checkout_linea - rh.fecha_checkin_linea
+     WHERE r.estado IN ('confirmada', 'completada')
+)
 SELECT CASE WHEN GROUPING(m.nombre) = 1 THEN 'TOTAL GENERAL'
           ELSE m.nombre
      END AS municipio,
@@ -68,19 +82,24 @@ SELECT CASE WHEN GROUPING(m.nombre) = 1 THEN 'TOTAL GENERAL'
           ELSE t.nombre
      END AS temporada,
      SUM(rh.valor_calculado) AS ingreso
-FROM reserva_habitacion rh
-JOIN reserva r ON r.id_reserva = rh.id_reserva
-JOIN habitacion h ON h.id_habitacion = rh.id_habitacion
-JOIN alojamiento a ON a.id_alojamiento  = h.id_alojamiento
+FROM noches nc
+JOIN habitacion h ON h.id_habitacion = nc.id_habitacion
+JOIN alojamiento a ON a.id_alojamiento = h.id_alojamiento
 JOIN tipo_alojamiento ta ON ta.id_tipo_alojamiento = a.id_tipo_alojamiento
 JOIN municipio m ON m.id_municipio = a.id_municipio
-INNER JOIN temporada t ON rh.fecha_checkin_linea BETWEEN t.fecha_inicio AND t.fecha_fin
-WHERE r.estado IN ('confirmada','completada')
+JOIN temporada t ON nc.fecha_noche BETWEEN t.fecha_inicio AND t.fecha_fin
+JOIN tarifa tf ON tf.id_habitacion = nc.id_habitacion
+     AND tf.id_temporada = t.id_temporada
 GROUP BY ROLLUP (m.nombre, ta.nombre, t.nombre)
 ORDER BY GROUPING(m.nombre), m.nombre NULLS LAST,
      GROUPING(ta.nombre),ta.nombre NULLS LAST,
      GROUPING(t.nombre), t.nombre NULLS LAST;
 
+-- Comprobar con:
+SELECT SUM(rh.valor_calculado) AS total_control
+FROM reserva_habitacion rh
+JOIN reserva r ON r.id_reserva = rh.id_reserva
+WHERE r.estado IN ('confirmada', 'completada');
 
 -- =================================================================================
 -- CONSULTA 3 - LOS 3 ALOJAMIENTOS DE MAYOR INGRESO DENTRO DE CADA MUNICIPIO
@@ -177,32 +196,27 @@ SELECT TO_CHAR(TO_DATE(:b_fecha_ini, 'DD/MM/YYYY'), 'DD/MM/YYYY') AS desde,
 
 
 -- =================================================================================
--- CONSULTA 6 - DISTRIBUCION DE RESERVAS POR ESTADO Y MUNICIPIO (UNPIVOT)
+-- CONSULTA 6 - LLEGADAS Y SALIDAS DE HABITACIONES POR MUNICIPIO Y ANIO (UNIPIVOT)
 -- =================================================================================
-SELECT municipio, estado, cantidad
+SELECT municipio, TO_CHAR(fecha, 'YYYY') AS anio, evento, 
+     COUNT(*) AS habitaciones
 FROM (
      SELECT m.nombre AS municipio,
-     COUNT(DISTINCT CASE WHEN r.estado = 'pendiente' THEN r.id_reserva END) AS pendiente,
-          COUNT(DISTINCT CASE WHEN r.estado = 'confirmada' THEN r.id_reserva END) AS confirmada,
-          COUNT(DISTINCT CASE WHEN r.estado = 'completada' THEN r.id_reserva END) AS completada,
-          COUNT(DISTINCT CASE WHEN r.estado = 'cancelada'  THEN r.id_reserva END) AS cancelada,
-          COUNT(DISTINCT r.id_reserva) AS total_municipio
-     FROM reserva r
-     JOIN reserva_habitacion rh ON rh.id_reserva = r.id_reserva
+          rh.fecha_checkin_linea,
+          rh.fecha_checkout_linea
+     FROM reserva_habitacion rh
+     JOIN reserva r ON r.id_reserva = rh.id_reserva
      JOIN habitacion h ON h.id_habitacion = rh.id_habitacion
      JOIN alojamiento a ON a.id_alojamiento = h.id_alojamiento
      JOIN municipio m ON m.id_municipio = a.id_municipio
-     GROUP BY m.nombre
+     WHERE r.estado IN ('confirmada', 'completada')
 )
 UNPIVOT (
-     cantidad 
-     FOR estado IN (
-          pendiente  AS 'pendiente',
-          confirmada AS 'confirmada',
-          completada AS 'completada',
-          cancelada  AS 'cancelada')
+     fecha FOR evento IN (fecha_checkin_linea AS 'llegada',
+          fecha_checkout_linea AS 'salida')
 )
- ORDER BY municipio, estado;
+GROUP BY municipio, TO_CHAR(fecha, 'YYYY'), evento
+ORDER BY municipio, anio, evento;
 
 
 -- =================================================================================
