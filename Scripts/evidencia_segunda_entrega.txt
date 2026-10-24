@@ -1,0 +1,374 @@
+
+POR_FUNCION     MANUAL
+----------- ----------
+     456000     456000
+
+
+POR_FUNCION     MANUAL
+----------- ----------
+     792000     792000
+
+
+Error que empieza en la línea: 27 del comando -
+SELECT pkg_turismouq.fn_valor_estadia(1, DATE '2027-01-10', DATE '2027-01-12') FROM dual
+Error en la línea de comandos : 27 Columna : 8
+Informe de error -
+Error SQL: ORA-20006: Hay 2 noche(s) sin temporada o tarifa vigente para la habitacion 1
+ORA-06512: en "PROYECTO.PKG_TURISMOUQ", línea 49
+
+https://docs.oracle.com/error-help/db/ora-20006/
+
+More Details :
+https://docs.oracle.com/error-help/db/ora-20006/
+https://docs.oracle.com/error-help/db/ora-06512/
+
+DIFERENCIAS
+-----------
+          0
+
+
+Error que empieza en la línea: 39 del comando -
+SELECT pkg_turismouq.fn_valor_estadia(999999, DATE '2026-08-10', DATE '2026-08-13') FROM dual
+Error en la línea de comandos : 39 Columna : 8
+Informe de error -
+Error SQL: ORA-20004: La habitacion 999999 no existe
+ORA-06512: en "PROYECTO.PKG_TURISMOUQ", línea 26
+
+https://docs.oracle.com/error-help/db/ora-20004/
+
+More Details :
+https://docs.oracle.com/error-help/db/ora-20004/
+https://docs.oracle.com/error-help/db/ora-06512/
+Reserva 25003 creada. Valor estadia: 657000
+OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 03/11/2026 y 06/11/2026
+
+Procedimiento PL/SQL terminado correctamente.
+OK (esperado): ORA-20001: Fechas invalidas: el check-out debe ser posterior al check-in
+
+Procedimiento PL/SQL terminado correctamente.
+OK (esperado): ORA-20003: Capacidad excedida: la habitacion admite maximo 3 huespedes y se pidieron 99
+
+Procedimiento PL/SQL terminado correctamente.
+Habitacion ocupada en la carga: 8 desde 09/11/2026
+OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 08/11/2026 y 10/11/2026
+
+Procedimiento PL/SQL terminado correctamente.
+OK (esperado): ORA-20008: Numero de huespedes invalido: debe ser al menos 1
+
+Procedimiento PL/SQL terminado correctamente.
+LIQUIDACION 07/2026
+El Recuerdo 1                    reservas:  11 | total: 9,391,000
+El Lago 2                        reservas:  54 | total: 119,041,700
+La Union 3                       reservas:  14 | total: 23,182,000
+Villa Nueva 4                    reservas:  11 | total: 18,769,500
+La Cumbre 5                      reservas:   6 | total: 20,308,100
+El Jardin 6                      reservas:  17 | total: 19,367,000
+El Faro 7                        reservas:  15 | total: 27,057,200
+El Portal 8                      reservas:   5 | total: 8,656,000
+El Progreso 9                    reservas:   5 | total: 9,090,800
+El Paraiso 10                    reservas:  43 | total: 81,936,000
+La Finca Real 11                 reservas:   9 | total: 11,899,600
+Villa Lucia 12                   reservas:  59 | total: 92,586,200
+La Victoria 13                   reservas:   7 | total: 10,948,000
+Casa Blanca 14                   reservas:  13 | total: 18,008,700
+El Roble 15                      reservas:  15 | total: 17,311,700
+Casa Blanca 16                   reservas:  52 | total: 66,634,000
+Los Naranjos 17                  reservas:   4 | total: 3,614,500
+Villa Hermosa 18                 reservas:   5 | total: 4,354,000
+San Jose 19                      reservas:   7 | total: 16,776,200
+La Aurora 20                     reservas:  15 | total: 32,770,000
+El Mirador 21                    reservas:  50 | total: 59,426,000
+El Progreso 22                   reservas:   7 | total: 8,724,100
+La Casona 23                     reservas:  12 | total: 16,339,000
+Mirador del Valle 24             reservas:  13 | total: 23,983,600
+La Colina 25                     reservas:   7 | total: 14,350,000
+El Faro 26                       reservas:   6 | total: 9,049,000
+El Parador 27                    reservas:  64 | total: 82,374,000
+Don Pedro 28                     reservas:  47 | total: 84,685,100
+Los Almendros 29                 reservas:  53 | total: 89,808,800
+La Esperanza 30                  reservas:  12 | total: 8,419,000
+El Camino 31                     reservas:  10 | total: 7,716,000
+El Diamante 32                   reservas:   4 | total: 4,373,000
+Los Pinos 33                     reservas:  61 | total: 63,340,000
+Los Andes 34                     reservas:   6 | total: 9,040,200
+El Diamante 35                   reservas:  10 | total: 19,473,800
+Las Flores 36                    reservas:   9 | total: 16,930,000
+Samanes 37                       reservas:   9 | total: 16,596,000
+La Union 38                      reservas:  11 | total: 11,352,000
+La Colina 39                     reservas:   6 | total: 6,833,000
+La Cumbre 40                     reservas:   3 | total: 16,695,000
+La Colina 41                     reservas:  20 | total: 21,233,000
+Los Andes 42                     reservas:   8 | total: 10,330,000
+El Portal 43                     reservas:  13 | total: 14,041,800
+Santa Fe 44                      reservas:  12 | total: 20,921,500
+Las Palmas 45                    reservas:  46 | total: 63,606,000
+La Estrella 46                   reservas:  13 | total: 19,439,600
+Villa del Rio 47                 reservas:   4 | total: 12,983,100
+El Recuerdo 48                   reservas:  12 | total: 18,456,000
+El Triunfo 49                    reservas:  55 | total: 52,007,000
+San Jose 50                      reservas:   4 | total: 8,084,000
+El Portal 51                     reservas:  13 | total: 21,828,000
+Villa Hermosa 52                 reservas:   6 | total: 4,582,000
+El Encuentro 53                  reservas:   9 | total: 7,547,000
+El Carmen 54                     reservas:   8 | total: 18,649,000
+Santa Fe 55                      reservas:  10 | total: 11,510,000
+Casa Blanca 56                   reservas:  12 | total: 19,153,000
+El Descanso 57                   reservas:  53 | total: 54,416,000
+Don Pedro 58                     reservas:   4 | total: 4,186,000
+Mirador del Valle 59             reservas:   6 | total: 5,668,000
+El Progreso 60                   reservas:  10 | total: 9,252,000
+Alojamientos liquidados: 60 de 60 recorridos
+TOTAL GENERAL: 1,579,102,800
+
+Procedimiento PL/SQL terminado correctamente.
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+El Lago 2                                                                                54             345         91931000          27110700       119041700
+Villa Lucia 12                                                                           59             244         68439000          24147200        92586200
+Los Almendros 29                                                                         53             291         66705000          23103800        89808800
+Don Pedro 28                                                                             47             286         64987000          19698100        84685100
+El Parador 27                                                                            64             341         82374000                 0        82374000
+El Paraiso 10                                                                            43             273         65271000          16665000        81936000
+Casa Blanca 16                                                                           52             243         66634000                 0        66634000
+Las Palmas 45                                                                            46             249         63606000                 0        63606000
+Los Pinos 33                                                                             61             239         63340000                 0        63340000
+El Mirador 21                                                                            50             238         59426000                 0        59426000
+El Descanso 57                                                                           53             245         54416000                 0        54416000
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+El Triunfo 49                                                                            55             245         52007000                 0        52007000
+La Aurora 20                                                                             15             101         32770000                 0        32770000
+El Faro 7                                                                                15              80         19700000           7357200        27057200
+Mirador del Valle 24                                                                     13              67         20119000           3864600        23983600
+La Union 3                                                                               14              87         23182000                 0        23182000
+El Portal 51                                                                             13              87         21828000                 0        21828000
+La Colina 41                                                                             20              77         21233000                 0        21233000
+Santa Fe 44                                                                              12              50         15348000           5573500        20921500
+La Cumbre 5                                                                               6              49         19592000            716100        20308100
+El Diamante 35                                                                           10              49         17965000           1508800        19473800
+La Estrella 46                                                                           13              58         13550000           5889600        19439600
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+El Jardin 6                                                                              17              70         19367000                 0        19367000
+Casa Blanca 56                                                                           12              55         19153000                 0        19153000
+Villa Nueva 4                                                                            11              89         15772000           2997500        18769500
+El Carmen 54                                                                              8              43         18649000                 0        18649000
+El Recuerdo 48                                                                           12              56         18456000                 0        18456000
+Casa Blanca 14                                                                           13              52         13166000           4842700        18008700
+El Roble 15                                                                              15              56         15368000           1943700        17311700
+Las Flores 36                                                                             9              51         15775000           1155000        16930000
+San Jose 19                                                                               7              51         15023000           1753200        16776200
+La Cumbre 40                                                                              3              38         15260000           1435000        16695000
+Samanes 37                                                                                9              36         12636000           3960000        16596000
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+La Casona 23                                                                             12              66         16339000                 0        16339000
+La Colina 25                                                                              7              46         14350000                 0        14350000
+El Portal 43                                                                             13              38         11745000           2296800        14041800
+Villa del Rio 47                                                                          4              24         11748000           1235100        12983100
+La Finca Real 11                                                                          9              45          7314000           4585600        11899600
+Santa Fe 55                                                                              10              45         11510000                 0        11510000
+La Union 38                                                                              11              65         11352000                 0        11352000
+La Victoria 13                                                                            7              57         10948000                 0        10948000
+Los Andes 42                                                                              8              32         10330000                 0        10330000
+El Recuerdo 1                                                                            11              45          9391000                 0         9391000
+El Progreso 60                                                                           10              48          9252000                 0         9252000
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+El Progreso 9                                                                             5              24          7958000           1132800         9090800
+El Faro 26                                                                                6              46          9049000                 0         9049000
+Los Andes 34                                                                              6              34          7323000           1717200         9040200
+El Progreso 22                                                                            7              27          7817000            907100         8724100
+El Portal 8                                                                               5              30          8656000                 0         8656000
+La Esperanza 30                                                                          12              36          6911000           1508000         8419000
+San Jose 50                                                                               4              16          8084000                 0         8084000
+El Camino 31                                                                             10              33          7716000                 0         7716000
+El Encuentro 53                                                                           9              38          7547000                 0         7547000
+La Colina 39                                                                              6              23          6833000                 0         6833000
+Mirador del Valle 59                                                                      6              36          5668000                 0         5668000
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+Villa Hermosa 52                                                                          6              21          4582000                 0         4582000
+El Diamante 32                                                                            4              28          4373000                 0         4373000
+Villa Hermosa 18                                                                          5              28          4354000                 0         4354000
+Don Pedro 58                                                                              4              19          4186000                 0         4186000
+Los Naranjos 17                                                                           4              16          2503000           1111500         3614500
+
+60 filas seleccionadas. 
+
+
+CONTROL_ESTADIAS
+----------------
+      1410887000
+
+
+EN_LIQUIDACION
+--------------
+    1410887000
+
+
+CONTROL_SERVICIOS
+-----------------
+        168215800
+
+
+EN_LIQUIDACION
+--------------
+     168215800
+
+=== A1: precios antes del cambio ===
+
+ ID_TARIFA PRECIO_NOCHE
+---------- ------------
+         1       184000
+         2       131000
+         3       219000
+
+=== A2: UN solo UPDATE sube 10.000 a tres tarifas ===
+
+3 filas actualizadas.
+
+
+ID_AUDITORIA  ID_TARIFA ID_USUARIO PRECIO_ANTERIOR PRECIO_NUEVO FECHA_CAMBIO        MOTIVO                                                      
+------------ ---------- ---------- --------------- ------------ ------------------- ------------------------------------------------------------
+           7          1          1          184000       194000 24/10/2026 06:15:53 Cambio de precio hecho por el usuario de BD PROYECTO        
+           8          2          1          131000       141000 24/10/2026 06:15:53 Cambio de precio hecho por el usuario de BD PROYECTO        
+           9          3          1          219000       229000 24/10/2026 06:15:53 Cambio de precio hecho por el usuario de BD PROYECTO        
+
+=== A3: UPDATE que NO cambia el precio (solo la fecha): no debe auditar ===
+
+FILAS_AUDITORIA_ANTES
+---------------------
+                    3
+
+
+3 filas actualizadas.
+
+
+FILAS_AUDITORIA_DESPUES
+-----------------------
+                      3
+
+Rollback terminado.
+=== A4: tras el ROLLBACK la auditoria de prueba desaparece (debe dar 0) ===
+
+FILAS_AUDITORIA_TRAS_ROLLBACK
+-----------------------------
+                            0
+
+=== B: no solape de reservas ===
+Habitacion de prueba: 8 (ocupada del 09/11/2026 al 11/11/2026 en los datos reales)
+B1 caso real: misma habitacion y mismas fechas, pendiente      -> RECHAZADA  OK
+      ORA-20010: La habitacion 8 ya esta ocupada entre el 09/11/2026 y el 11/11/2026 por otra reserva activa.
+B2 reserva A confirmada, 10-14 mar 2027                        -> ACEPTADA   OK
+B3 reserva B pendiente, 12-16 mar 2027 (cruza con A)           -> RECHAZADA  OK
+      ORA-20010: La habitacion 8 ya esta ocupada entre el 12/03/2027 y el 16/03/2027 por otra reserva activa.
+B4 reserva C pendiente, 14-16 mar 2027 (entra al salir A)      -> ACEPTADA   OK
+B5 reserva D cancelada, 11-13 mar 2027 (no bloquea)            -> ACEPTADA   OK
+Resultado B: 5 OK, 0 FALLA (esperado: 5 OK, 0 FALLA)
+Lineas de reserva antes: 29486 / despues del ROLLBACK: 29486
+
+Procedimiento PL/SQL terminado correctamente.
+=== C: pares de lineas activas que se solapan en los datos cargados (debe ser 0) ===
+
+PARES_EN_CONFLICTO
+------------------
+                 0
+
+=== D: dos alojamientos en una reserva, capacidad y fechas de la linea ===
+Habitaciones: 1 y 8 (alojamiento 1), 9 (alojamiento 2). Capacidad de la 1: 3
+D1 linea 1 en el alojamiento 1                             -> ACEPTADA   OK
+D2 linea 2 de la MISMA reserva en el alojamiento 2         -> RECHAZADA  OK
+      ORA-20011: La reserva 25001 ya tiene habitaciones de otro alojamiento; la habitacion 9 es del alojamiento 2. Una reserva solo puede tener habitaciones de un alojamiento.
+D3 linea 2 de la misma reserva, mismo alojamiento 1        -> ACEPTADA   OK
+D4 huespedes = capacidad + 1                               -> RECHAZADA  OK
+      ORA-20013: Capacidad excedida: la habitacion 1 admite maximo 3 huespedes y la linea trae 4.
+D5 huespedes = capacidad exacta                            -> ACEPTADA   OK
+D6 linea entra ANTES del check-in de la reserva            -> RECHAZADA  OK
+      ORA-20014: Las fechas de la linea (09/07/2027 a 13/07/2027) deben quedar dentro del rango de la reserva (10/07/2027 a 14/07/2027).
+D7 linea sale DESPUES del check-out de la reserva          -> RECHAZADA  OK
+      ORA-20014: Las fechas de la linea (12/07/2027 a 16/07/2027) deben quedar dentro del rango de la reserva (10/07/2027 a 14/07/2027).
+D8 linea dentro del rango de la reserva                    -> ACEPTADA   OK
+Resultado D: 8 OK, 0 FALLA (esperado: 8 OK, 0 FALLA)
+Lineas de reserva antes: 29486 / despues del ROLLBACK: 29486
+
+Procedimiento PL/SQL terminado correctamente.
+=== E: servicio de otro alojamiento ===
+Reserva en el alojamiento 2 (habitacion 9). Servicio propio: 1 / servicio ajeno: 3 (alojamiento 4)
+E1 servicio del MISMO alojamiento de la habitacion         -> ACEPTADA   OK
+E2 servicio de OTRO alojamiento                            -> RECHAZADA  OK
+      ORA-20012: El servicio 3 es del alojamiento 4 y la reserva 25001 se hospeda en otro alojamiento.
+Resultado E: 2 OK, 0 FALLA (esperado: 2 OK, 0 FALLA)
+Servicios contratados antes: 40000 / despues del ROLLBACK: 40000
+
+Procedimiento PL/SQL terminado correctamente.
+=== F: resenas de reservas completadas ===
+Reserva completada: 3 (cliente 431, alojamiento 27) / reserva cancelada: 1
+F1 reserva completada, cliente y alojamiento correctos     -> ACEPTADA   OK
+F2 reserva CANCELADA (nunca se hospedo)                    -> RECHAZADA  OK
+      ORA-20015: Resena no valida: la reserva 1 debe estar completada, ser del cliente 1584 y tener habitaciones en el alojamiento 30.
+F3 reserva completada, pero de OTRO cliente                -> RECHAZADA  OK
+      ORA-20015: Resena no valida: la reserva 3 debe estar completada, ser del cliente 1 y tener habitaciones en el alojamiento 27.
+F4 reserva completada, pero de OTRO alojamiento            -> RECHAZADA  OK
+      ORA-20015: Resena no valida: la reserva 3 debe estar completada, ser del cliente 431 y tener habitaciones en el alojamiento 1.
+Resultado F: 4 OK, 0 FALLA (esperado: 4 OK, 0 FALLA)
+Resenas antes: 8103 / despues del ROLLBACK: 8103
+
+Procedimiento PL/SQL terminado correctamente.
+=== G1: reservas con habitaciones de mas de un alojamiento (regla 4) ===
+
+RESERVAS_EN_VARIOS_ALOJAMIENTOS
+-------------------------------
+                              0
+
+=== G2: servicios contratados que son de otro alojamiento (regla 5) ===
+
+SERVICIOS_DE_OTRO_ALOJAMIENTO
+-----------------------------
+                            0
+
+=== G3: lineas con mas huespedes que la capacidad de la habitacion (regla 7) ===
+
+LINEAS_SOBRE_CAPACIDAD
+----------------------
+                     0
+
+=== G4: lineas con fechas fuera del rango de su reserva (regla 7) ===
+
+LINEAS_FUERA_DE_RANGO
+---------------------
+                    0
+
+=== G5: pares de temporadas que se solapan (regla 8) ===
+
+TEMPORADAS_SOLAPADAS
+--------------------
+                   0
+
+=== H: UPDATE, reactivacion, servicio previo y temporadas ===
+H1 UPDATE: huespedes = capacidad + 1                           -> RECHAZADA  OK
+      ORA-20013: Capacidad excedida: la habitacion 1 admite maximo 3 huespedes y la linea trae 4.
+H2 UPDATE: la linea sale del rango de la reserva               -> RECHAZADA  OK
+      ORA-20014: Las fechas de la linea (10/09/2027 a 20/09/2027) deben quedar dentro del rango de la reserva (10/09/2027 a 14/09/2027).
+H3 UPDATE: el cambio de fechas crea un solape                  -> RECHAZADA  OK
+      ORA-20010: El cambio deja 1 par(es) de lineas solapadas en una habitacion.
+H4 UPDATE: la habitacion pasa a otro alojamiento               -> RECHAZADA  OK
+      ORA-20011: El cambio deja 1 reserva(s) con habitaciones o servicios de mas de un alojamiento.
+H5 reactivar reserva cancelada con la habitacion ocupada       -> RECHAZADA  OK
+      ORA-20010: El cambio de estado deja 1 par(es) de reservas activas solapadas.
+H6 linea de otro alojamiento en reserva con servicio previo    -> RECHAZADA  OK
+      ORA-20011: La reserva 25007 ya tiene servicios de otro alojamiento; la habitacion 1 es del alojamiento 1.
+H7 temporada que solapa con una existente                      -> RECHAZADA  OK
+      ORA-20017: Temporadas solapadas: hay 1 par(es) de temporadas que cubren las mismas fechas.
+H8 temporada nueva sin solape (control)                        -> ACEPTADA   OK
+Resultado H: 8 OK, 0 FALLA (esperado: 8 OK, 0 FALLA)
+Lineas de reserva antes: 29486 / despues del ROLLBACK: 29486
+
+Procedimiento PL/SQL terminado correctamente.
+Rollback terminado.

@@ -58,7 +58,7 @@ ORDER BY municipio, anio;
 -- y cada noche se cobra con la tarifa de la temporada en que cae.
 -- =================================================================================
 WITH nums AS (
-     SELECT LEVEL -1 AS n
+     SELECT LEVEL - 1 AS n
      FROM dual
      CONNECT BY LEVEL <= (SELECT MAX(fecha_checkout_linea - fecha_checkin_linea)
           FROM reserva_habitacion)
@@ -81,7 +81,7 @@ SELECT CASE WHEN GROUPING(m.nombre) = 1 THEN 'TOTAL GENERAL'
           WHEN GROUPING(t.nombre) = 1 THEN 'Subtotal del tipo'
           ELSE t.nombre
      END AS temporada,
-     SUM(rh.valor_calculado) AS ingreso
+     SUM(tf.precio_noche) AS ingreso
 FROM noches nc
 JOIN habitacion h ON h.id_habitacion = nc.id_habitacion
 JOIN alojamiento a ON a.id_alojamiento = h.id_alojamiento
@@ -92,7 +92,7 @@ JOIN tarifa tf ON tf.id_habitacion = nc.id_habitacion
      AND tf.id_temporada = t.id_temporada
 GROUP BY ROLLUP (m.nombre, ta.nombre, t.nombre)
 ORDER BY GROUPING(m.nombre), m.nombre NULLS LAST,
-     GROUPING(ta.nombre),ta.nombre NULLS LAST,
+     GROUPING(ta.nombre), ta.nombre NULLS LAST,
      GROUPING(t.nombre), t.nombre NULLS LAST;
 
 -- Comprobar con:

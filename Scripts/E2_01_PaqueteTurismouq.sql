@@ -47,7 +47,7 @@ END;
 
 -- Liquidación mensual por alojamiento: una fila por alojamiento, año y mes.
 -- UNIQUE (anio, mes, id_alojamiento) permite recalcular un mes sin duplicar filas
-CREATE TABLE TABLE liquidacion_mensual (
+CREATE TABLE liquidacion_mensual (
       id_liquidacion INTEGER GENERATED ALWAYS AS IDENTITY,
       anio INTEGER NOT NULL,
       mes INTEGER NOT NULL,
