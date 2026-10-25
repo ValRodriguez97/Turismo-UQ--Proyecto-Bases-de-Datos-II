@@ -1,6 +1,7 @@
 -- =================================================================================
--- TurismoUQ - Entrega 2 - Evidencia de pruebas (paquete y disparadores)
--- Ejecutar con F5 DESPUES de los scripts del paquete y de los disparadores.
+-- TurismoUQ - Entrega 2 - Evidencia de pruebas (paquete, disparadores, tablespace y
+-- vista materializada)
+-- Ejecutar con F5 DESPUES de los scripts E2_01, E2_02 y E2_03.
 -- La evidencia queda en evidencia_entrega2.txt (SPOOL).
 -- =================================================================================
 SET DEFINE OFF
@@ -692,4 +693,272 @@ END;
 /
 
 ROLLBACK;
+
+-- =================================================================================
+-- PRUEBAS DEL SCRIPT 3: TABLESPACE Y VISTA MATERIALIZADA
+-- Ejecutar DESPUES de E2_03_Tablespace_VistaMaterializada.sql
+-- I: tablespace del historico | J: particiones del historico
+-- K: contenido de la vista materializada | L: politica de refresco
+-- La prueba L hace COMMIT de una reserva de prueba y al final la borra y vuelve a
+-- refrescar la vista: la base queda igual que antes.
+-- =================================================================================
+COLUMN tablespace_name FORMAT A16
+COLUMN segment_name FORMAT A28
+COLUMN partition_name FORMAT A10
+COLUMN table_name FORMAT A22
+COLUMN high_value FORMAT A40
+COLUMN mview_name FORMAT A22
+COLUMN staleness FORMAT A16
+COLUMN job_name FORMAT A26
+COLUMN repeat_interval FORMAT A44
+COLUMN next_run_date FORMAT A36
+COLUMN municipio FORMAT A16
+
+-- =================================================================================
+-- PRUEBA I - TABLESPACE TS_HISTORICO
+-- Esperado: el tablespace existe ONLINE, el usuario tiene cuota, las particiones y
+-- el indice del historico estan en TS_HISTORICO, y RESERVA sigue en USERS.
+-- =================================================================================
+PROMPT === I1: el tablespace existe ===
+SELECT tablespace_name, status, contents
+FROM user_tablespaces
+WHERE tablespace_name = 'TS_HISTORICO';
+
+PROMPT === I2: cuota del usuario sobre el tablespace (max_bytes = -1: ilimitada) ===
+SELECT tablespace_name, ROUND(bytes / 1024) AS kb_usados, max_bytes
+FROM user_ts_quotas
+WHERE tablespace_name = 'TS_HISTORICO';
+
+PROMPT === I3: que hay guardado en TS_HISTORICO (particiones e indice del historico) ===
+SELECT segment_name, partition_name, segment_type, tablespace_name, ROUND(bytes / 1024) AS kb
+FROM user_segments
+WHERE tablespace_name = 'TS_HISTORICO'
+ORDER BY segment_name, partition_name;
+
+PROMPT === I4: la tabla operativa RESERVA sigue en USERS ===
+SELECT table_name, tablespace_name
+FROM user_tables
+WHERE table_name = 'RESERVA';
+
+-- =================================================================================
+-- PRUEBA J - PARTICIONES DEL HISTORICO (fragmentacion horizontal por RANGE)
+-- Esperado:
+--   J1 dos particiones (p_2024, p_2025), ambas en TS_HISTORICO
+--   J3 completitud = 0, J4 disyuncion = 0, J5 reconstruccion = 0
+--   J6 el plan muestra PARTITION RANGE SINGLE con Pstart = Pstop = 2 (solo p_2025)
+--   J7 una reserva de 2026 se rechaza con ORA-14400 (no hay cajon para ella)
+-- =================================================================================
+PROMPT === J1: como quedaron las particiones ===
+SELECT partition_position, partition_name, tablespace_name, high_value
+FROM user_tab_partitions
+WHERE table_name = 'RESERVA_HISTORICO'
+ORDER BY partition_position;
+
+PROMPT === J2: donde empieza y termina cada cajon ===
+SELECT 'p_2024' AS particion, MIN(checkin) AS desde, MAX(checkin) AS hasta, COUNT(*) AS reservas
+FROM reserva_historico PARTITION (p_2024)
+UNION ALL
+SELECT 'p_2025', MIN(checkin), MAX(checkin), COUNT(*)
+FROM reserva_historico PARTITION (p_2025);
+
+PROMPT === J3: completitud: reservas de 2024-2025 que no llegaron al historico (debe ser 0) ===
+SELECT COUNT(*) AS faltantes
+FROM (SELECT id_reserva FROM reserva WHERE checkin < DATE '2026-01-01'
+      MINUS
+      SELECT id_reserva FROM reserva_historico);
+
+PROMPT === J4: disyuncion: reservas que estan en los dos cajones (debe ser 0) ===
+SELECT COUNT(*) AS repetidas
+FROM (SELECT id_reserva FROM reserva_historico PARTITION (p_2024)
+      INTERSECT
+      SELECT id_reserva FROM reserva_historico PARTITION (p_2025));
+
+PROMPT === J5: reconstruccion: filas del historico distintas a las originales (debe ser 0) ===
+SELECT COUNT(*) AS distintas
+FROM (SELECT id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado
+      FROM reserva WHERE checkin < DATE '2026-01-01'
+      MINUS
+      SELECT id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado
+      FROM reserva_historico);
+
+PROMPT === J6: poda de particiones: las reservas de marzo 2025 solo abren el cajon p_2025 ===
+EXPLAIN PLAN FOR
+SELECT * FROM reserva_historico
+WHERE checkin >= DATE '2025-03-01' AND checkin < DATE '2025-04-01';
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(NULL, NULL, 'BASIC +PARTITION'));
+
+PROMPT === J7: una reserva de 2026 no cabe en el historico -> debe dar ORA-14400 ===
+INSERT INTO reserva_historico (id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado)
+VALUES (-1, 1, DATE '2026-04-20', DATE '2026-05-01', DATE '2026-05-03', 'completada');
+ROLLBACK;
+
+-- =================================================================================
+-- PRUEBA K - CONTENIDO DE LA VISTA MATERIALIZADA MV_OCUPACION_MENSUAL
+-- Esperado:
+--   K2 filas = alojamientos x meses (estan tambien los meses sin ocupacion)
+--   K3 y K4 diferencia = 0
+--   K5 0 filas con ocupacion mayor a 100 %
+-- =================================================================================
+PROMPT === K1: definicion de la vista (COMPLETE, DEMAND) ===
+SELECT mview_name, refresh_mode, refresh_method, build_mode,
+       last_refresh_type, TO_CHAR(last_refresh_date, 'DD/MM/YYYY HH24:MI') AS ultimo_refresco, staleness
+  FROM user_mviews
+ WHERE mview_name = 'MV_OCUPACION_MENSUAL';
+
+PROMPT === K2: una fila por alojamiento y mes, sin huecos ===
+SELECT COUNT(*) AS filas,
+       COUNT(DISTINCT id_alojamiento) AS alojamientos,
+       COUNT(DISTINCT mes_inicio) AS meses,
+       COUNT(DISTINCT id_alojamiento) * COUNT(DISTINCT mes_inicio) AS esperado,
+       TO_CHAR(MIN(mes_inicio), 'MM/YYYY') AS desde,
+       TO_CHAR(MAX(mes_inicio), 'MM/YYYY') AS hasta,
+       SUM(CASE WHEN noches_ocupadas = 0 THEN 1 ELSE 0 END) AS filas_sin_ocupacion
+  FROM mv_ocupacion_mensual;
+
+PROMPT === K3: total de noches de la vista vs total de noches de las lineas (diferencia 0) ===
+SELECT (SELECT SUM(noches_ocupadas) FROM mv_ocupacion_mensual)
+     - (SELECT SUM(rh.fecha_checkout_linea - rh.fecha_checkin_linea)
+          FROM reserva_habitacion rh
+          JOIN reserva r ON r.id_reserva = rh.id_reserva
+         WHERE r.estado IN ('confirmada', 'completada')) AS diferencia
+  FROM dual;
+
+-- K4 recalcula julio 2026 con otro metodo: expande cada estadia noche por noche con un
+-- calendario de dias y cuenta las noches que caen en julio. Si una estadia empieza en
+-- junio y termina en julio, ambos metodos deben contar solo las noches de julio.
+PROMPT === K4: julio 2026 por alojamiento, vista vs calculo noche por noche (diferencia 0) ===
+WITH dias AS (
+  SELECT DATE '2026-07-01' + LEVEL - 1 AS dia FROM dual CONNECT BY LEVEL <= 31
+),
+control AS (
+  SELECT h.id_alojamiento, COUNT(*) AS noches
+    FROM reserva_habitacion rh
+    JOIN reserva r ON r.id_reserva = rh.id_reserva
+    JOIN habitacion h ON h.id_habitacion = rh.id_habitacion
+    JOIN dias d ON d.dia >= rh.fecha_checkin_linea AND d.dia < rh.fecha_checkout_linea
+   WHERE r.estado IN ('confirmada', 'completada')
+   GROUP BY h.id_alojamiento
+)
+SELECT COUNT(*) AS alojamientos_con_diferencia
+  FROM mv_ocupacion_mensual v
+  LEFT JOIN control c ON c.id_alojamiento = v.id_alojamiento
+ WHERE v.anio = 2026 AND v.mes = 7
+   AND v.noches_ocupadas <> NVL(c.noches, 0);
+
+PROMPT === K5: ninguna ocupacion supera el 100 % (debe ser 0) ===
+SELECT COUNT(*) AS filas_sobre_100 FROM mv_ocupacion_mensual WHERE pct_ocupacion > 100;
+
+PROMPT === K6: uso de la vista: % de ocupacion por municipio y mes en 2025 ===
+SELECT *
+  FROM (SELECT mu.nombre AS municipio, v.mes,
+               ROUND(100 * SUM(v.noches_ocupadas) / SUM(v.noches_disponibles), 1) AS pct
+          FROM mv_ocupacion_mensual v
+          JOIN municipio mu ON mu.id_municipio = v.id_municipio
+         WHERE v.anio = 2025
+         GROUP BY mu.nombre, v.mes)
+ PIVOT (MAX(pct) FOR mes IN (1 AS ene, 2 AS feb, 3 AS mar, 4 AS abr, 5 AS may, 6 AS jun,
+                              7 AS jul, 8 AS ago, 9 AS sep, 10 AS oct, 11 AS nov, 12 AS dic))
+ ORDER BY municipio;
+
+PROMPT === K7: los 5 alojamientos con mayor ocupacion en diciembre 2025 ===
+SELECT *
+  FROM (SELECT a.nombre AS alojamiento, v.habitaciones, v.noches_disponibles,
+               v.noches_ocupadas, v.pct_ocupacion
+          FROM mv_ocupacion_mensual v
+          JOIN alojamiento a ON a.id_alojamiento = v.id_alojamiento
+         WHERE v.anio = 2025 AND v.mes = 12
+         ORDER BY v.pct_ocupacion DESC)
+ WHERE ROWNUM <= 5;
+
+-- =================================================================================
+-- PRUEBA L - POLITICA DE REFRESCO
+-- Esperado:
+--   L1 el job existe, habilitado, todos los dias a las 2:00 a.m.
+--   L2 una reserva confirmada NO aparece en la vista hasta que se refresca (ON DEMAND);
+--      despues del refresco suma sus 4 noches; al borrarla y refrescar, la vista vuelve
+--      al valor inicial. Resultado L: 3 OK, 0 FALLA.
+-- =================================================================================
+PROMPT === L1: job de refresco diario ===
+SELECT job_name, enabled, state, repeat_interval, next_run_date
+  FROM user_scheduler_jobs
+ WHERE job_name = 'JOB_REFRESCO_MV_OCUPACION';
+
+PROMPT === L2: la vista solo cambia cuando se refresca ===
+DECLARE
+  v_hab NUMBER; v_aloj NUMBER; v_id reserva.id_reserva%TYPE;
+  v_antes NUMBER; v_sin_refresco NUMBER; v_refrescada NUMBER; v_final NUMBER;
+  v_staleness user_mviews.staleness%TYPE;
+  v_ok NUMBER := 0; v_mal NUMBER := 0;
+
+  -- noches de noviembre 2026 del alojamiento de prueba, leidas de la vista
+  FUNCTION noches_mv RETURN NUMBER IS
+    v NUMBER;
+  BEGIN
+    SELECT NVL(SUM(noches_ocupadas), 0) INTO v
+      FROM mv_ocupacion_mensual
+     WHERE id_alojamiento = v_aloj AND anio = 2026 AND mes = 11;
+    RETURN v;
+  END;
+
+  PROCEDURE resultado(p_desc VARCHAR2, p_bien BOOLEAN) IS
+  BEGIN
+    IF p_bien THEN v_ok := v_ok + 1; ELSE v_mal := v_mal + 1; END IF;
+    DBMS_OUTPUT.PUT_LINE(RPAD(p_desc, 70) || CASE WHEN p_bien THEN ' OK' ELSE ' FALLA' END);
+  END;
+BEGIN
+  -- habitacion libre del 16 al 20 de noviembre de 2026
+  SELECT MIN(h.id_habitacion) INTO v_hab
+    FROM habitacion h
+   WHERE NOT EXISTS (SELECT 1 FROM reserva_habitacion rh
+                       JOIN reserva r ON r.id_reserva = rh.id_reserva
+                      WHERE rh.id_habitacion = h.id_habitacion
+                        AND r.estado <> 'cancelada'
+                        AND rh.fecha_checkin_linea < DATE '2026-11-20'
+                        AND DATE '2026-11-16' < rh.fecha_checkout_linea);
+  SELECT id_alojamiento INTO v_aloj FROM habitacion WHERE id_habitacion = v_hab;
+
+  v_antes := noches_mv;
+  DBMS_OUTPUT.PUT_LINE('Alojamiento ' || v_aloj || ', noches en nov 2026 antes: ' || v_antes);
+
+  -- reserva de 4 noches, confirmada y con COMMIT
+  pkg_turismouq.sp_crear_reserva(1, v_hab, DATE '2026-11-16', DATE '2026-11-20', 1, v_id);
+  UPDATE reserva SET estado = 'confirmada' WHERE id_reserva = v_id;
+  COMMIT;
+
+  SELECT staleness INTO v_staleness FROM user_mviews WHERE mview_name = 'MV_OCUPACION_MENSUAL';
+  v_sin_refresco := noches_mv;
+  DBMS_OUTPUT.PUT_LINE('Despues del COMMIT, sin refrescar: ' || v_sin_refresco ||
+                       ' (staleness = ' || v_staleness || ')');
+  resultado('L2a sin refresco la vista no cambia (ON DEMAND)', v_sin_refresco = v_antes);
+
+  DBMS_MVIEW.REFRESH('MV_OCUPACION_MENSUAL', 'C', atomic_refresh => FALSE);
+  v_refrescada := noches_mv;
+  DBMS_OUTPUT.PUT_LINE('Despues de DBMS_MVIEW.REFRESH: ' || v_refrescada);
+  resultado('L2b despues del refresco suma las 4 noches', v_refrescada = v_antes + 4);
+
+  -- limpieza: borrar la reserva de prueba y dejar la vista como estaba
+  DELETE FROM reserva_habitacion WHERE id_reserva = v_id;
+  DELETE FROM reserva WHERE id_reserva = v_id;
+  COMMIT;
+  DBMS_MVIEW.REFRESH('MV_OCUPACION_MENSUAL', 'C', atomic_refresh => FALSE);
+  v_final := noches_mv;
+  DBMS_OUTPUT.PUT_LINE('Despues de borrar la reserva y refrescar: ' || v_final);
+  resultado('L2c al borrar la reserva y refrescar vuelve al valor inicial', v_final = v_antes);
+
+  DBMS_OUTPUT.PUT_LINE('Resultado L: ' || v_ok || ' OK, ' || v_mal || ' FALLA (esperado: 3 OK, 0 FALLA)');
+EXCEPTION
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('FALLA L2: ' || SQLERRM);
+    ROLLBACK;
+    -- si la reserva de prueba alcanzo a quedar guardada, se borra
+    IF v_id IS NOT NULL THEN
+      DELETE FROM reserva_habitacion WHERE id_reserva = v_id;
+      DELETE FROM reserva WHERE id_reserva = v_id;
+      COMMIT;
+      DBMS_MVIEW.REFRESH('MV_OCUPACION_MENSUAL', 'C', atomic_refresh => FALSE);
+    END IF;
+END;
+/
+
 SPOOL OFF
