@@ -20,7 +20,11 @@
 --  - 20015 resena no valida
 --  - 20016 no existe el administrador
 --  - 20017 temporadas solapadas
-
+--
+-- Valentina Gonzalez Diaz
+-- Raquel Lopez Aristizabal
+-- Valentina Rodriguez Castro
+--
 -- Orden de ejecucion: DESPUES de E2_01_PaqueteTurismouq.sql 
 -- =================================================================================
 SET DEFINE OFF
@@ -323,7 +327,7 @@ END;
 -- ---------------------------------------------------------------------------------
 -- REGLA 2 - Resenas solo de estadias completadas
 -- La resena es valida solo si existe una reserva que: sea la que la resena senala,
--- este COMPLETAD, sea del mismo cliente y tenga habitaciones en ese alojamiento.
+-- este COMPLETADA, sea del mismo cliente y tenga habitaciones en ese alojamiento.
 -- ---------------------------------------------------------------------------------
 CREATE OR REPLACE TRIGGER trg_resena_completada
 BEFORE INSERT OR UPDATE OF id_reserva, id_cliente, id_alojamiento ON resena
@@ -353,9 +357,10 @@ END;
 -- =================================================================================
 -- PARTE 4 - COBERTURA DE UPDATE (disparadores compuestos)
 -- ---------------------------------------------------------------------------------
--- Un disparador de fila no puede leer su propia tabla (ORA-04091). La solución es crear 
--- un disparador compuesto: la seccion BEFORE EACH ROW solo anota que lineas cambiaron, y
--- la seccion AFTER STATEMENT, donde la tabla ya no esta mutando, las valida.
+-- Un disparador de fila no puede leer su propia tabla (ORA-04091). Por eso la cobertura
+-- UPDATE se hace con disparadores AFTER de sentencia: cuando la sentencia termina, la tabla
+-- ya no esta mutando y se puede consultar completa. A cambio, revalidan toda la tabla y no 
+-- solo las filas tocadas.
 -- =================================================================================
 
 -- 4.1 UPDATE de una linea: revalida no solape (-20010) y regla 4 (-20011)
@@ -457,7 +462,7 @@ BEGIN
   END IF;
 END;
 /
--- Verificacion: los seis disparadores deben aparecer ENABLED
+-- Verificacion: los nueve disparadores deben aparecer ENABLED
 SELECT trigger_name, trigger_type, triggering_event, table_name, status
 FROM user_triggers
 WHERE trigger_name IN ('TRG_AUDITORIA_TARIFA','TRG_NO_SOLAPE_RESERVA','TRG_RESERVA_UN_ALOJAMIENTO',

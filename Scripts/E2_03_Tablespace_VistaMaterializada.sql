@@ -12,59 +12,32 @@
 -- Valentina Rodriguez Castro
 --
 -- Orden de ejecucion: DESPUES de E2_02_Disparadores.sql y ANTES de E2_04_Pruebas.sql
--- La PARTE A se ejecuta UNA vez en la conexion SYSTEM; desde la PARTE B en adelante
--- se ejecuta con F5 en la conexion del proyecto.
+-- Los permisos se ejecuta UNA vez en la conexion SYSTEM, ejecutar antes E2_00_system.sql
 -- =================================================================================
 
--- =================================================================================
--- PARTE A - EN SYSTEM: TABLESPACE TS_HISTORICO
--- ---------------------------------------------------------------------------------
--- Copiar este bloque en la conexion SYSTEM, quitar los comentarios y ejecutar.
--- Si el usuario del proyecto no se llama PROYECTO, cambiar el nombre en A.4.
--- =================================================================================
--- -- A.1 Trabajar dentro de la base de datos conectable (PDB)
--- ALTER SESSION SET CONTAINER = XEPDB1;
---
--- -- A.2 Los estantes fisicos: los datafiles que ya existen y su ruta
--- SELECT tablespace_name, file_name, ROUND(bytes / 1024 / 1024) AS mb, autoextensible
--- FROM dba_data_files
--- ORDER BY tablespace_name;
---
--- -- A.3 Crear la zona "historico" con su propio archivo fisico.
--- -- El datafile queda en la misma carpeta del datafile de USERS (la ruta de A.2),
--- -- asi no hay que escribir la ruta a mano. Equivale a:
--- --   CREATE TABLESPACE ts_historico
--- --     DATAFILE '<RUTA>ts_historico01.dbf' SIZE 20M
--- --     AUTOEXTEND ON NEXT 5M MAXSIZE 100M;
--- DECLARE
---   v_ruta VARCHAR2(500);
--- BEGIN
---   SELECT SUBSTR(file_name, 1, GREATEST(INSTR(file_name, '\', -1), INSTR(file_name, '/', -1)))
---   INTO v_ruta
---   FROM dba_data_files
---   WHERE tablespace_name = 'USERS' AND ROWNUM = 1;
---
---   EXECUTE IMMEDIATE 'CREATE TABLESPACE ts_historico DATAFILE ''' || v_ruta ||
---     'ts_historico01.dbf'' SIZE 20M AUTOEXTEND ON NEXT 5M MAXSIZE 100M';
--- END;
--- /
---
--- -- A.4 Dar permiso al usuario para usar espacio en esa zona, y para crear el job
--- --     que refresca la vista materializada (PARTE E)
--- ALTER USER proyecto QUOTA UNLIMITED ON ts_historico;
--- GRANT CREATE MATERIALIZED VIEW, CREATE JOB TO proyecto;
---
--- -- A.5 Comprobar que el archivo existe
--- SELECT tablespace_name, file_name, ROUND(bytes / 1024 / 1024) AS mb
--- FROM dba_data_files
--- WHERE tablespace_name = 'TS_HISTORICO';
 
 SET DEFINE OFF
 SET SERVEROUTPUT ON
 WHENEVER SQLERROR CONTINUE
 
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
+DECLARE
+  v_ok NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_ok
+  FROM user_ts_quotas
+  WHERE tablespace_name = 'TS_HISTORICO' AND (max_bytes = -1 OR max_bytes > 0);
+
+  IF v_ok = 0 THEN
+    RAISE_APPLICATION_ERROR(-20999,
+      'Falta TS_HISTORICO o la cuota del usuario: ejecutar primero E2_00_system.sql como SYSTEM.');
+  END IF;
+END;
+/
+WHENEVER SQLERROR CONTINUE
+
 -- =================================================================================
--- PARTE B - POR QUE SEPARAR EL HISTORICO DE RESERVAS EN SU PROPIO TABLESPACE
+-- PARTE A - POR QUE SEPARAR EL HISTORICO DE RESERVAS EN SU PROPIO TABLESPACE
 -- ---------------------------------------------------------------------------------
 -- Las reservas de anios cerrados (2024 y 2025) y las del anio en curso se usan de
 -- forma muy distinta:
@@ -90,7 +63,7 @@ WHERE tablespace_name = 'TS_HISTORICO';
 
 
 -- =================================================================================
--- PARTE C - TABLA RESERVA_HISTORICO PARTICIONADA POR RANGE
+-- PARTE B - TABLA RESERVA_HISTORICO PARTICIONADA POR RANGE
 -- ---------------------------------------------------------------------------------
 -- Fragmentacion horizontal: las reservas se parten por filas segun el anio del
 -- check-in, y cada anio cerrado va en su propio cajon (particion) dentro de
@@ -115,7 +88,7 @@ WHERE tablespace_name = 'TS_HISTORICO';
 --     WHERE checkin >= DATE '2026-01-01' AND checkin < DATE '2027-01-01';
 -- =================================================================================
 
--- C.1 Borrar la tabla si existe, para poder re-ejecutar el script
+-- B.1 Borrar la tabla si existe, para poder re-ejecutar el script
 BEGIN
   EXECUTE IMMEDIATE 'DROP TABLE reserva_historico PURGE';
 EXCEPTION WHEN OTHERS THEN
@@ -123,7 +96,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 /
 
--- C.2 Crear la tabla particionada y llenarla con las reservas de los anios cerrados
+-- B.2 Crear la tabla particionada y llenarla con las reservas de los anios cerrados
 CREATE TABLE reserva_historico
 TABLESPACE ts_historico
 PARTITION BY RANGE (checkin) (
@@ -135,7 +108,7 @@ SELECT id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado
 FROM reserva
 WHERE checkin < DATE '2026-01-01';
 
--- C.3 Llave primaria (su indice tambien va en TS_HISTORICO) y restricciones
+-- B.3 Llave primaria (su indice tambien va en TS_HISTORICO) y restricciones
 ALTER TABLE reserva_historico
     ADD CONSTRAINT reserva_historico_pk PRIMARY KEY (id_reserva)
     USING INDEX TABLESPACE ts_historico;
@@ -148,7 +121,7 @@ ALTER TABLE reserva_historico
 
 COMMENT ON TABLE reserva_historico IS 'Historico de reservas de los anios cerrados, particionado por anio de check-in; vive en el tablespace TS_HISTORICO.';
 
--- C.4 Como quedaron las particiones: limite, tablespace y filas de cada cajon
+-- B.4 Como quedaron las particiones: limite, tablespace y filas de cada cajon
 SELECT partition_position, partition_name, tablespace_name, high_value
 FROM user_tab_partitions
 WHERE table_name = 'RESERVA_HISTORICO'
@@ -158,9 +131,50 @@ SELECT 'p_2024' AS particion, COUNT(*) AS reservas FROM reserva_historico PARTIT
 UNION ALL
 SELECT 'p_2025', COUNT(*) FROM reserva_historico PARTITION (p_2025);
 
+-- B.5 Procedimiento que alimenta el historico al cerrar un anio
+-- Crea la particion del anio si no existe y copia las reservas de ese anio que aun no
+-- estan. Es idempotente: ejecutarlo dos veces no duplica filas. Solo para anios
+-- posteriores a la ultima particion o ya existentes; los anios abiertos se rechazan.
+CREATE OR REPLACE PROCEDURE sp_archivar_anio (p_anio IN NUMBER) IS
+  v_existe NUMBER;
+  v_filas  NUMBER;
+  v_ini    DATE;
+  v_fin    DATE;
+BEGIN
+  IF p_anio IS NULL OR p_anio >= EXTRACT(YEAR FROM SYSDATE) THEN
+    RAISE_APPLICATION_ERROR(-20021,
+      'Solo se archivan anios cerrados; el anio ' || p_anio || ' no esta cerrado.');
+  END IF;
+
+  v_ini := TO_DATE(p_anio || '-01-01', 'YYYY-MM-DD');
+  v_fin := ADD_MONTHS(v_ini, 12);
+
+  SELECT COUNT(*) INTO v_existe
+  FROM user_tab_partitions
+  WHERE table_name = 'RESERVA_HISTORICO' AND partition_name = 'P_' || p_anio;
+
+  IF v_existe = 0 THEN
+    EXECUTE IMMEDIATE 'ALTER TABLE reserva_historico ADD PARTITION p_' || p_anio ||
+      ' VALUES LESS THAN (DATE ''' || TO_CHAR(v_fin, 'YYYY-MM-DD') ||
+      ''') TABLESPACE ts_historico';
+  END IF;
+
+  INSERT INTO reserva_historico (id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado)
+  SELECT r.id_reserva, r.id_cliente, r.fecha_reserva, r.checkin, r.checkout, r.estado
+  FROM reserva r
+  WHERE r.checkin >= v_ini AND r.checkin < v_fin
+    AND NOT EXISTS (SELECT 1 FROM reserva_historico h WHERE h.id_reserva = r.id_reserva);
+
+  v_filas := SQL%ROWCOUNT;
+  COMMIT;
+  DBMS_OUTPUT.PUT_LINE('Anio ' || p_anio || ' archivado: ' || v_filas || ' reserva(s) nuevas.');
+END sp_archivar_anio;
+/
+SHOW ERRORS PROCEDURE sp_archivar_anio
+
 
 -- =================================================================================
--- PARTE D - VISTA MATERIALIZADA MV_OCUPACION_MENSUAL
+-- PARTE C - VISTA MATERIALIZADA MV_OCUPACION_MENSUAL
 -- ---------------------------------------------------------------------------------
 -- Una vista normal guarda solo la consulta; una vista materializada guarda tambien
 -- el RESULTADO, y por eso hay que refrescarla cuando cambian los datos (PARTE E).
@@ -168,8 +182,8 @@ SELECT 'p_2025', COUNT(*) FROM reserva_historico PARTITION (p_2025);
 -- Una fila por alojamiento y mes, incluidos los meses en que el alojamiento no tuvo
 -- ninguna reserva (ocupacion 0 %), para todo el rango de meses con datos:
 --   noches_disponibles = habitaciones del alojamiento x dias del mes
---   noches_ocupadas    = noches vendidas que CAEN en ese mes
---   pct_ocupacion      = noches_ocupadas / noches_disponibles x 100
+--   noches_ocupadas = noches vendidas que CAEN en ese mes
+--   pct_ocupacion = noches_ocupadas / noches_disponibles x 100
 --
 -- Una estadia que cruza dos meses (28 de enero al 3 de febrero) reparte sus noches:
 -- 4 en enero (28, 29, 30, 31) y 2 en febrero (1, 2). La noche del check-out no se
@@ -183,7 +197,7 @@ SELECT 'p_2025', COUNT(*) FROM reserva_historico PARTITION (p_2025);
 -- ocupacion por municipio o por tipo sin volver a las tablas base.
 -- =================================================================================
 
--- D.1 Borrar la vista si existe, para poder re-ejecutar el script
+-- C.1 Borrar la vista si existe, para poder re-ejecutar el script
 BEGIN
   EXECUTE IMMEDIATE 'DROP MATERIALIZED VIEW mv_ocupacion_mensual';
 EXCEPTION WHEN OTHERS THEN
@@ -191,7 +205,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 /
 
--- D.2 Crear la vista materializada (BUILD IMMEDIATE: se llena al crearse)
+-- C.2 Crear la vista materializada (BUILD IMMEDIATE: se llena al crearse)
 CREATE MATERIALIZED VIEW mv_ocupacion_mensual
   BUILD IMMEDIATE
   REFRESH COMPLETE ON DEMAND
@@ -245,18 +259,18 @@ LEFT JOIN ocupacion o ON o.id_alojamiento = a.id_alojamiento
 
 COMMENT ON MATERIALIZED VIEW mv_ocupacion_mensual IS 'Ocupacion mensual precalculada por alojamiento: noches ocupadas vs disponibles. Refresco COMPLETE ON DEMAND, programado cada noche a las 2:00 a.m.';
 
--- D.3 Indices sobre la vista: busqueda por alojamiento y mes, y reportes por municipio
+-- C.3 Indices sobre la vista: busqueda por alojamiento y mes, y reportes por municipio
 CREATE UNIQUE INDEX mv_ocupacion_uq ON mv_ocupacion_mensual (id_alojamiento, mes_inicio);
 CREATE INDEX mv_ocupacion_municipio_ix ON mv_ocupacion_mensual (id_municipio, anio, mes);
 
--- D.4 Que guarda Oracle de la vista materializada
+-- C.4 Que guarda Oracle de la vista materializada
 SELECT mview_name, refresh_mode, refresh_method, build_mode, last_refresh_date
 FROM user_mviews
 WHERE mview_name = 'MV_OCUPACION_MENSUAL';
 
 
 -- =================================================================================
--- PARTE E - POLITICA DE REFRESCO
+-- PARTE D - POLITICA DE REFRESCO
 -- ---------------------------------------------------------------------------------
 -- Politica elegida: COMPLETE + ON DEMAND, refrescada por un job todas las noches a
 -- las 2:00 a.m., y a mano (DBMS_MVIEW.REFRESH) despues de una carga masiva.
@@ -289,7 +303,7 @@ WHERE mview_name = 'MV_OCUPACION_MENSUAL';
 --    queda vacia unos segundos mientras se refresca, lo que no importa a las 2 a.m.
 -- =================================================================================
 
--- E.1 Borrar el job si existe, para poder re-ejecutar el script
+-- D.1 Borrar el job si existe, para poder re-ejecutar el script
 BEGIN
   DBMS_SCHEDULER.DROP_JOB('JOB_REFRESCO_MV_OCUPACION', force => TRUE);
 EXCEPTION WHEN OTHERS THEN
@@ -297,16 +311,16 @@ EXCEPTION WHEN OTHERS THEN
 END;
 /
 
--- E.2 Job de refresco diario (requiere GRANT CREATE JOB, PARTE A)
+-- D.2 Job de refresco diario (requiere GRANT CREATE JOB, PARTE A)
 BEGIN
   DBMS_SCHEDULER.CREATE_JOB(
-    job_name        => 'JOB_REFRESCO_MV_OCUPACION',
-    job_type        => 'PLSQL_BLOCK',
-    job_action      => 'BEGIN DBMS_MVIEW.REFRESH(''MV_OCUPACION_MENSUAL'', ''C'', atomic_refresh => FALSE); END;',
-    start_date      => SYSTIMESTAMP,
+    job_name => 'JOB_REFRESCO_MV_OCUPACION',
+    job_type => 'PLSQL_BLOCK',
+    job_action => 'BEGIN DBMS_MVIEW.REFRESH(''MV_OCUPACION_MENSUAL'', ''C'', atomic_refresh => FALSE); END;',
+    start_date => SYSTIMESTAMP,
     repeat_interval => 'FREQ=DAILY;BYHOUR=2;BYMINUTE=0;BYSECOND=0',
-    enabled         => TRUE,
-    comments        => 'Refresco completo diario de la ocupacion mensual (2:00 a.m.)');
+    enabled => TRUE,
+    comments => 'Refresco completo diario de la ocupacion mensual (2:00 a.m.)');
   DBMS_OUTPUT.PUT_LINE('Job JOB_REFRESCO_MV_OCUPACION creado: todos los dias a las 2:00 a.m.');
 EXCEPTION WHEN OTHERS THEN
   IF SQLCODE IN (-27486, -1031) THEN -- privilegios insuficientes
@@ -318,5 +332,5 @@ EXCEPTION WHEN OTHERS THEN
 END;
 /
 
--- E.3 Refresco manual (el mismo que hace el job), para usar despues de una carga masiva:
+-- D.3 Refresco manual (el mismo que hace el job), para usar despues de una carga masiva:
 -- EXEC DBMS_MVIEW.REFRESH('MV_OCUPACION_MENSUAL', 'C', atomic_refresh => FALSE);

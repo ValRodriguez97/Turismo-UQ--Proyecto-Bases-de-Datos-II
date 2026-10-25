@@ -10,7 +10,7 @@ SET SERVEROUTPUT ON SIZE UNLIMITED
 SET LINESIZE 220
 SET VERIFY OFF
 COLUMN motivo FORMAT A60
-SPOOL evidencia_disparadores.txt
+SPOOL evidencia_entrega2.txt
 
 -- ===== PRUEBA 1: fn_valor_estadia =====
 -- 1a) Una sola temporada: hab 1, 10 al 13 ago 2026 (3 noches, baja = temporada 20)
@@ -25,7 +25,20 @@ SELECT pkg_turismouq.fn_valor_estadia(1, DATE '2026-12-14', DATE '2026-12-18') A
 FROM dual;
 
 -- 1c) Sin temporada definida (2027): debe dar ORA-20006
-SELECT pkg_turismouq.fn_valor_estadia(1, DATE '2027-01-10', DATE '2027-01-12') FROM dual;
+DECLARE
+  v_x NUMBER;
+BEGIN
+  v_x := pkg_turismouq.fn_valor_estadia(1, DATE '2027-01-10', DATE '2027-01-12');
+  DBMS_OUTPUT.PUT_LINE('FALLO: debio rechazar la estadia sin temporada');
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -20006 THEN
+      DBMS_OUTPUT.PUT_LINE('OK (esperado): ' || SQLERRM);
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
 
 -- 1d) Validacion global: la funcion recalcula lo que cargó el script de carga (debe dar 0)
 SELECT COUNT(*) AS diferencias
@@ -37,7 +50,20 @@ FROM (SELECT rh.valor_calculado,
 WHERE valor_calculado <> recalculado;
 
 -- 1e) Habitacion inexistente: debe dar ORA-20004
-SELECT pkg_turismouq.fn_valor_estadia(999999, DATE '2026-08-10', DATE '2026-08-13') FROM dual;
+DECLARE
+  v_x NUMBER;
+BEGIN
+  v_x := pkg_turismouq.fn_valor_estadia(999999, DATE '2026-08-10', DATE '2026-08-13');
+  DBMS_OUTPUT.PUT_LINE('FALLO: debio rechazar la habitacion inexistente');
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -20004 THEN
+      DBMS_OUTPUT.PUT_LINE('OK (esperado): ' || SQLERRM);
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
 
 -- ===== PRUEBA 2: sp_crear_reserva =====
 -- 2a) Caso exitoso + intento de solape inmediato
@@ -126,6 +152,59 @@ EXCEPTION WHEN pkg_turismouq.e_huespedes_invalidos THEN
 END;
 /
 
+-- 2f) Reserva con DOS habitaciones del mismo alojamiento (sp_agregar_habitacion)
+PROMPT === 2f: reserva con varias habitaciones ===
+DECLARE
+  v_h1   NUMBER;
+  v_h2   NUMBER;
+  v_otra NUMBER;
+  v_n    NUMBER;
+  v_id   reserva.id_reserva%TYPE;
+BEGIN
+  -- dos habitaciones libres del mismo alojamiento del 1 al 4 de diciembre de 2026
+  SELECT h1, h2 INTO v_h1, v_h2
+  FROM (SELECT a.id_habitacion h1, b.id_habitacion h2
+        FROM habitacion a
+        JOIN habitacion b ON b.id_alojamiento = a.id_alojamiento
+                         AND b.id_habitacion > a.id_habitacion
+        WHERE NOT EXISTS (SELECT 1 FROM reserva_habitacion rh
+                            JOIN reserva r ON r.id_reserva = rh.id_reserva
+                           WHERE rh.id_habitacion IN (a.id_habitacion, b.id_habitacion)
+                             AND r.estado <> 'cancelada'
+                             AND rh.fecha_checkin_linea  < DATE '2026-12-04'
+                             AND rh.fecha_checkout_linea > DATE '2026-12-01')
+        ORDER BY a.id_habitacion, b.id_habitacion)
+  WHERE ROWNUM = 1;
+
+  -- una habitacion libre de OTRO alojamiento (para probar el rechazo)
+  SELECT MIN(h.id_habitacion) INTO v_otra
+  FROM habitacion h
+  WHERE h.id_alojamiento <> (SELECT id_alojamiento FROM habitacion WHERE id_habitacion = v_h1)
+    AND NOT EXISTS (SELECT 1 FROM reserva_habitacion rh
+                      JOIN reserva r ON r.id_reserva = rh.id_reserva
+                     WHERE rh.id_habitacion = h.id_habitacion
+                       AND r.estado <> 'cancelada'
+                       AND rh.fecha_checkin_linea  < DATE '2026-12-04'
+                       AND rh.fecha_checkout_linea > DATE '2026-12-01');
+
+  pkg_turismouq.sp_crear_reserva(1, v_h1, DATE '2026-12-01', DATE '2026-12-04', 1, v_id);
+  pkg_turismouq.sp_agregar_habitacion(v_id, v_h2, DATE '2026-12-01', DATE '2026-12-04', 1);
+
+  SELECT COUNT(*) INTO v_n FROM reserva_habitacion WHERE id_reserva = v_id;
+  DBMS_OUTPUT.PUT_LINE('Lineas de la reserva ' || v_id || ': ' || v_n || ' (esperado 2)');
+
+  -- habitacion de otro alojamiento en la misma reserva: lo rechaza el disparador
+  BEGIN
+    pkg_turismouq.sp_agregar_habitacion(v_id, v_otra, DATE '2026-12-01', DATE '2026-12-04', 1);
+    DBMS_OUTPUT.PUT_LINE('FALLO: debio rechazar otro alojamiento');
+  EXCEPTION WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('OK (esperado): ' || SQLERRM);
+  END;
+
+  ROLLBACK;
+END;
+/
+
 -- ===== PRUEBA 3: cursor de liquidacion =====
 EXEC pkg_turismouq.sp_liquidacion_mensual(2026, 7);
 
@@ -147,7 +226,8 @@ SELECT SUM(rs.cantidad * rs.precio_unitario) AS control_servicios
 FROM reserva_servicio rs
 JOIN reserva r ON r.id_reserva = rs.id_reserva
 WHERE r.estado IN ('confirmada','completada')
-  AND rs.fecha_consumo >= DATE '2026-07-01' AND rs.fecha_consumo < DATE '2026-08-01';
+    AND NVL(rs.fecha_consumo, r.checkin) >= DATE '2026-07-01'
+    AND NVL(rs.fecha_consumo, r.checkin) <  DATE '2026-08-01';
 SELECT SUM(ingreso_servicios) AS en_liquidacion
 FROM liquidacion_mensual WHERE anio = 2026 AND mes = 7;
 
@@ -789,9 +869,38 @@ WHERE checkin >= DATE '2025-03-01' AND checkin < DATE '2025-04-01';
 SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(NULL, NULL, 'BASIC +PARTITION'));
 
 PROMPT === J7: una reserva de 2026 no cabe en el historico -> debe dar ORA-14400 ===
-INSERT INTO reserva_historico (id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado)
-VALUES (-1, 1, DATE '2026-04-20', DATE '2026-05-01', DATE '2026-05-03', 'completada');
-ROLLBACK;
+BEGIN
+  INSERT INTO reserva_historico (id_reserva, id_cliente, fecha_reserva, checkin, checkout, estado)
+  VALUES (-1, 1, DATE '2026-04-20', DATE '2026-05-01', DATE '2026-05-03', 'completada');
+  DBMS_OUTPUT.PUT_LINE('FALLO: debio rechazar el anio sin particion');
+  ROLLBACK;
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -14400 THEN
+      DBMS_OUTPUT.PUT_LINE('OK (esperado): ORA-14400 no hay particion para una reserva de 2026');
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
+
+PROMPT === J8: archivar 2025 otra vez no duplica (debe decir 0 reservas nuevas) ===
+EXEC sp_archivar_anio(2025);
+SELECT COUNT(*) AS en_historico FROM reserva_historico;
+
+PROMPT === J9: un anio abierto se rechaza -> debe dar ORA-20021 ===
+BEGIN
+  sp_archivar_anio(2026);
+  DBMS_OUTPUT.PUT_LINE('FALLO: debio rechazar el anio abierto');
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -20021 THEN
+      DBMS_OUTPUT.PUT_LINE('OK (esperado): ' || SQLERRM);
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
 
 -- =================================================================================
 -- PRUEBA K - CONTENIDO DE LA VISTA MATERIALIZADA MV_OCUPACION_MENSUAL

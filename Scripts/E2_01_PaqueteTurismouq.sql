@@ -9,9 +9,7 @@
 -- Orden de ejecución: despues del DDL y de la carga de datos
 -- =======================================================
 
--- Permisos ejecutados en System
--- GRANT CREATE TABLE, CREATE SEQUENCE, CREATE TRIGGER, CREATE VIEW, CREATE PROCEDURE, CREATE MATERIALIZED VIEW TO #nombreconexion;
--- ALTER USER #usuario QUOTA UNLIMITED ON users;
+-- Los privilegios y la cuota se otorgan en E2_00_system.sql (Conexión SYSTEM)
 
 -- =======================================================
 -- 0. OBJETOS DE APOYO
@@ -64,7 +62,7 @@ CREATE TABLE liquidacion_mensual (
 ALTER TABLE liquidacion_mensual ADD CONSTRAINT liquidacion_mensual_pk PRIMARY KEY (id_liquidacion);
 ALTER TABLE liquidacion_mensual ADD CONSTRAINT liq_alojamiento_fk
       FOREIGN KEY (id_alojamiento) REFERENCES alojamiento (id_alojamiento);
-COMMENT ON TABLE liquidacion_mensual IS 'Resultado del cursos de liquidacion mensual: ingresos por estadias y servicios de cada alojamiento en un mes.';
+COMMENT ON TABLE liquidacion_mensual IS 'Resultado del cursor de liquidacion mensual: ingresos por estadias y servicios de cada alojamiento en un mes.';
 
 -- =======================================================
 -- 1. PAQUETE pkg_turismouq - ESPECIFICACION
@@ -90,6 +88,8 @@ CREATE OR REPLACE PACKAGE pkg_turismouq AS
       PRAGMA EXCEPTION_INIT(e_huespedes_invalidos, -20008);
       e_periodo_invalido EXCEPTION; 
       PRAGMA EXCEPTION_INIT(e_periodo_invalido, -20020);
+      e_reserva_invalida EXCEPTION;
+      PRAGMA EXCEPTION_INIT(e_reserva_invalida, -20009);
 
 
       -- Valor de una estadia noche por noche según la temporada de cada noche
@@ -109,6 +109,15 @@ CREATE OR REPLACE PACKAGE pkg_turismouq AS
             p_id_reserva OUT reserva.id_reserva%TYPE
       );
 
+      -- Agrega una habitacion a una reserva ya creada
+      PROCEDURE sp_agregar_habitacion (
+            p_id_reserva IN reserva.id_reserva%TYPE,
+            p_id_habitacion IN habitacion.id_habitacion%TYPE,
+            p_checkin IN DATE,
+            p_checkout IN DATE,
+            p_num_huespedes IN NUMBER
+      );
+
       -- Liquidación mensual por alojamiento
       PROCEDURE sp_liquidacion_mensual (
             p_anio IN NUMBER,
@@ -118,7 +127,7 @@ END pkg_turismouq;
 /
 
 -- =======================================================
--- 2. PAQUETE pkg_turismouq - CUERPO (implementacioó)
+-- 2. PAQUETE pkg_turismouq - CUERPO (implementación)
 -- =======================================================
 CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
       -- 2.1 FUNCION fn_valor_estadia
@@ -233,6 +242,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
 
             --  4. Disponibilidad: ninguna linea NO cancelada puede cruzar [checkin, checkout]
             -- el dia de salida queda libre para el siguiente ingreso
+            -- CRITERIO DE OCUPACION: la disponibilidad bloquea con pendiente, confirmada y completada, porque
+            -- una reserva pendiente ya tiene la habitacion. La vista materializada y la liquidacion
+            -- cuentan solo confirmada y completada porque miden ocupacion e INGRESO real:
+            -- una pendiente aun no es ingreso.
             SELECT COUNT(*) INTO v_choques
             FROM reserva_habitacion rh
             JOIN reserva r ON r.id_reserva = rh.id_reserva
@@ -273,7 +286,95 @@ CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
             DBMS_OUTPUT.PUT_LINE('Reserva ' || p_id_reserva || ' creada. Valor estadia: ' || v_valor);
       END sp_crear_reserva;
 
-      -- 2.3 PROCEDIMINETO sp_liquidacion_mensual 
+      -- 2.2b. PROCEDIMIENTO sp_agregar_habitacion
+      -- Valida: fechas - reserva -> rango de la reserva -> capacidad -> disponibilidad.
+      -- Que todas las habitaciones sean del mismo alojamiento lo valida el disparador 
+      -- trg_reserva_un_alojamiento.
+      PROCEDURE sp_agregar_habitacion (
+            p_id_reserva IN reserva.id_reserva%TYPE,
+            p_id_habitacion IN habitacion.id_habitacion%TYPE,
+            p_checkin IN DATE,
+            p_checkout IN DATE,
+            p_num_huespedes IN NUMBER    
+      ) IS 
+            v_in DATE := TRUNC(p_checkin);
+            v_out DATE := TRUNC(p_checkout);
+            v_r_in reserva.checkin%TYPE;
+            v_r_out reserva.checkout%TYPE;
+            v_estado reserva.estado%TYPE;
+            v_capacidad habitacion.capacidad_max%TYPE;
+            v_choques NUMBER;
+            v_valor NUMBER;
+      BEGIN 
+            IF v_in IS NULL OR v_out IS NULL OR v_out <= v_in THEN
+                  RAISE_APPLICATION_ERROR(-20001,
+                  'Fechas invalidas: el check-out debe ser posterior al check-in');
+            END IF;
+
+            BEGIN
+                  SELECT checkin, checkout, estado INTO v_r_in, v_r_out, v_estado
+                  FROM reserva WHERE id_reserva = p_id_reserva;
+            EXCEPTION WHEN NO_DATA_FOUND THEN
+                  RAISE_APPLICATION_ERROR(-20009, 'La reserva ' || p_id_reserva || ' no existe');
+            END;
+
+            IF v_estado = 'cancelada' THEN
+                  RAISE_APPLICATION_ERROR(-20009, 
+                  'La reserva ' || p_id_reserva || ' esta cancelada: no admite habitaciones');
+            END IF;
+
+            IF v_in < v_r_in OR v_out > v_r_out THEN
+                  RAISE_APPLICATION_ERROR(-20014,
+                  'Las fechas de la linea deben quedar dentro del rango de la reserva');
+            END IF;
+
+            BEGIN 
+                  SELECT capacidad_max INTO v_capacidad
+                  FROM habitacion WHERE id_habitacion = p_id_habitacion;
+            EXCEPTION WHEN NO_DATA_FOUND THEN
+                  RAISE_APPLICATION_ERROR(-20004,
+                  'La habitacion ' || p_id_habitacion || ' no existe');
+            END;
+
+            IF p_num_huespedes IS NULL OR p_num_huespedes < 1 THEN
+                  RAISE_APPLICATION_ERROR(-20008,
+                  'Numero de huespedos invalido: debe ser al menos 1');
+            END IF;
+
+            IF p_num_huespedes > v_capacidad THEN 
+                  RAISE_APPLICATION_ERROR(-20003,
+                  'Capacidad excedida: la habitacion admite maximo ' || v_capacidad ||
+                  ' huespedes y se pidieron ' || p_num_huespedes);
+            END IF;
+
+            SELECT COUNT(*) INTO v_choques
+            FROM reserva_habitacion rh
+            JOIN reserva r ON r.id_reserva = rh.id_reserva
+            WHERE rh.id_habitacion = p_id_habitacion
+                  AND r.estado IN ('pendiente', 'confirmada', 'completada')
+                  AND rh.fecha_checkin_linea < v_out
+                  AND rh.fecha_checkout_linea > v_in;
+
+            IF v_choques > 0 THEN
+                  RAISE_APPLICATION_ERROR(-20002,
+                  'Habitacion no disponible: esta ocupada entre ' || 
+                  TO_CHAR(v_in, 'DD/MM/YYYY') || ' y ' || TO_CHAR(v_out, 'DD/MM/YYYY'));
+            END IF;
+
+            v_valor := fn_valor_estadia(p_id_habitacion, v_in, v_out);
+
+            INSERT INTO reserva_habitacion
+                  (id_reserva_hab, id_reserva, id_habitacion, fecha_checkin_linea, 
+                  fecha_checkout_linea, num_huespedes, valor_calculado)
+            VALUES 
+                  (seq_reserva_hab.NEXTVAL, p_id_reserva, p_id_habitacion, v_in, v_out, 
+                  p_num_huespedes, v_valor);
+            
+            DBMS_OUTPUT.PUT_LINE('Habitacion ' || p_id_habitacion || ' agregada a la reserva ' ||
+                  p_id_reserva || '. Valor: ' || v_valor);
+      END sp_agregar_habitacion;
+
+      -- 2.3 PROCEDIMIENTO sp_liquidacion_mensual 
       -- por cada alojamiento suma lo generado en el mes
 
       PROCEDURE sp_liquidacion_mensual (
@@ -287,6 +388,8 @@ CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
             v_filas NUMBER := 0;
 
             -- Cursor explicito
+            -- CRITERIO DE MES: la estadia se liquida completa en el mes del check-in de la linea. 
+            -- La vista MV_OCUPACION_MENSUAL, en cambio, reparte las noches en cada mes que toca.
             CURSOR c_liq (cp_ini DATE, cp_fin DATE) IS
                   SELECT a.id_alojamiento, a.nombre, 
                         NVL(e.reservas, 0) AS reservas,
@@ -311,8 +414,8 @@ CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
                               JOIN servicio sv ON sv.id_servicio = rs.id_servicio
                               JOIN reserva r ON r.id_reserva = rs.id_reserva
                               WHERE r.estado IN ('confirmada', 'completada')
-                                    AND rs.fecha_consumo >= cp_ini
-                                    AND rs.fecha_consumo < cp_fin
+                                    AND NVL(rs.fecha_consumo, r.checkin) >= cp_ini
+                                    AND NVL(rs.fecha_consumo, r.checkin) < cp_fin
                               GROUP BY sv.id_alojamiento) s
                         ON s.id_alojamiento = a.id_alojamiento
                   ORDER BY a.id_alojamiento;

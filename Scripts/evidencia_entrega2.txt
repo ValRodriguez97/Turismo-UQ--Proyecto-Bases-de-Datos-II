@@ -8,38 +8,18 @@ POR_FUNCION     MANUAL
 ----------- ----------
      792000     792000
 
+OK (esperado): ORA-20006: Hay 2 noche(s) sin temporada o tarifa vigente para la habitacion 1
 
-Error que empieza en la línea: 27 del comando -
-SELECT pkg_turismouq.fn_valor_estadia(1, DATE '2027-01-10', DATE '2027-01-12') FROM dual
-Error en la línea de comandos : 27 Columna : 8
-Informe de error -
-Error SQL: ORA-20006: Hay 2 noche(s) sin temporada o tarifa vigente para la habitacion 1
-ORA-06512: en "PROYECTO.PKG_TURISMOUQ", línea 49
-
-https://docs.oracle.com/error-help/db/ora-20006/
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-20006/
-https://docs.oracle.com/error-help/db/ora-06512/
+Procedimiento PL/SQL terminado correctamente.
 
 DIFERENCIAS
 -----------
           0
 
+OK (esperado): ORA-20004: La habitacion 999999 no existe
 
-Error que empieza en la línea: 39 del comando -
-SELECT pkg_turismouq.fn_valor_estadia(999999, DATE '2026-08-10', DATE '2026-08-13') FROM dual
-Error en la línea de comandos : 39 Columna : 8
-Informe de error -
-Error SQL: ORA-20004: La habitacion 999999 no existe
-ORA-06512: en "PROYECTO.PKG_TURISMOUQ", línea 26
-
-https://docs.oracle.com/error-help/db/ora-20004/
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-20004/
-https://docs.oracle.com/error-help/db/ora-06512/
-Reserva 25003 creada. Valor estadia: 657000
+Procedimiento PL/SQL terminado correctamente.
+Reserva 25004 creada. Valor estadia: 657000
 OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 03/11/2026 y 06/11/2026
 
 Procedimiento PL/SQL terminado correctamente.
@@ -54,6 +34,15 @@ OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 08/11/202
 
 Procedimiento PL/SQL terminado correctamente.
 OK (esperado): ORA-20008: Numero de huespedes invalido: debe ser al menos 1
+
+Procedimiento PL/SQL terminado correctamente.
+=== 2f: reserva con varias habitaciones ===
+Reserva 25005 creada. Valor estadia: 351000
+Habitacion 5 agregada a la reserva 25005. Valor: 324000
+Lineas de la reserva 25005: 2 (esperado 2)
+OK (esperado): ORA-20011: La reserva 25005 ya tiene habitaciones de otro alojamiento; la habitacion 9 es del alojamiento 2. Una reserva solo puede tener habitaciones de un alojamiento.
+ORA-06512: en "PROYECTO.TRG_RESERVA_UN_ALOJAMIENTO", línea 22
+ORA-04088: error durante la ejecución del disparador 'PROYECTO.TRG_RESERVA_UN_ALOJAMIENTO'
 
 Procedimiento PL/SQL terminado correctamente.
 LIQUIDACION 07/2026
@@ -237,9 +226,9 @@ EN_LIQUIDACION
 
 ID_AUDITORIA  ID_TARIFA ID_USUARIO PRECIO_ANTERIOR PRECIO_NUEVO FECHA_CAMBIO        MOTIVO                                                      
 ------------ ---------- ---------- --------------- ------------ ------------------- ------------------------------------------------------------
-           7          1          1          184000       194000 24/10/2026 06:15:53 Cambio de precio hecho por el usuario de BD PROYECTO        
-           8          2          1          131000       141000 24/10/2026 06:15:53 Cambio de precio hecho por el usuario de BD PROYECTO        
-           9          3          1          219000       229000 24/10/2026 06:15:53 Cambio de precio hecho por el usuario de BD PROYECTO        
+           4          1          1          184000       194000 25/10/2026 20:11:47 Cambio de precio hecho por el usuario de BD PROYECTO        
+           5          2          1          131000       141000 25/10/2026 20:11:47 Cambio de precio hecho por el usuario de BD PROYECTO        
+           6          3          1          219000       229000 25/10/2026 20:11:47 Cambio de precio hecho por el usuario de BD PROYECTO        
 
 === A3: UPDATE que NO cambia el precio (solo la fecha): no debe auditar ===
 
@@ -372,3 +361,181 @@ Lineas de reserva antes: 29486 / despues del ROLLBACK: 29486
 
 Procedimiento PL/SQL terminado correctamente.
 Rollback terminado.
+=== I1: el tablespace existe ===
+
+TABLESPACE_NAME  STATUS    CONTENTS             
+---------------- --------- ---------------------
+TS_HISTORICO     ONLINE    PERMANENT            
+
+=== I2: cuota del usuario sobre el tablespace (max_bytes = -1: ilimitada) ===
+
+TABLESPACE_NAME   KB_USADOS  MAX_BYTES
+---------------- ---------- ----------
+TS_HISTORICO          16768         -1
+
+=== I3: que hay guardado en TS_HISTORICO (particiones e indice del historico) ===
+
+SEGMENT_NAME                 PARTITION_ SEGMENT_TYPE       TABLESPACE_NAME          KB
+---------------------------- ---------- ------------------ ---------------- ----------
+RESERVA_HISTORICO            P_2024     TABLE PARTITION    TS_HISTORICO           8192
+RESERVA_HISTORICO            P_2025     TABLE PARTITION    TS_HISTORICO           8192
+RESERVA_HISTORICO_PK                    INDEX              TS_HISTORICO            384
+
+=== I4: la tabla operativa RESERVA sigue en USERS ===
+
+TABLE_NAME             TABLESPACE_NAME 
+---------------------- ----------------
+RESERVA                USERS           
+
+=== J1: como quedaron las particiones ===
+
+PARTITION_POSITION PARTITION_ TABLESPACE_NAME  HIGH_VALUE                              
+------------------ ---------- ---------------- ----------------------------------------
+                 1 P_2024     TS_HISTORICO     TO_DATE(' 2025-01-01 00:00:00', 'SYYYY-M
+                                               M-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIA
+
+                 2 P_2025     TS_HISTORICO     TO_DATE(' 2026-01-01 00:00:00', 'SYYYY-M
+                                               M-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIA
+
+
+=== J2: donde empieza y termina cada cajon ===
+
+PARTIC DESDE    HASTA      RESERVAS
+------ -------- -------- ----------
+p_2024 01/01/24 28/12/24       5089
+p_2025 01/01/25 28/12/25       8884
+
+=== J3: completitud: reservas de 2024-2025 que no llegaron al historico (debe ser 0) ===
+
+ FALTANTES
+----------
+         0
+
+=== J4: disyuncion: reservas que estan en los dos cajones (debe ser 0) ===
+
+ REPETIDAS
+----------
+         0
+
+=== J5: reconstruccion: filas del historico distintas a las originales (debe ser 0) ===
+
+ DISTINTAS
+----------
+         0
+
+=== J6: poda de particiones: las reservas de marzo 2025 solo abren el cajon p_2025 ===
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 771352523
+ 
+--------------------------------------------------------------------
+| Id  | Operation              | Name              | Pstart| Pstop |
+--------------------------------------------------------------------
+|   0 | SELECT STATEMENT       |                   |       |       |
+|   1 |  PARTITION RANGE SINGLE|                   |     2 |     2 |
+|   2 |   TABLE ACCESS FULL    | RESERVA_HISTORICO |     2 |     2 |
+--------------------------------------------------------------------
+
+9 filas seleccionadas. 
+
+=== J7: una reserva de 2026 no cabe en el historico -> debe dar ORA-14400 ===
+OK (esperado): ORA-14400 no hay particion para una reserva de 2026
+
+Procedimiento PL/SQL terminado correctamente.
+=== J8: archivar 2025 otra vez no duplica (debe decir 0 reservas nuevas) ===
+Anio 2025 archivado: 0 reserva(s) nuevas.
+
+Procedimiento PL/SQL terminado correctamente.
+
+EN_HISTORICO
+------------
+       13973
+
+=== J9: un anio abierto se rechaza -> debe dar ORA-20021 ===
+OK (esperado): ORA-20021: Solo se archivan anios cerrados; el anio 2026 no esta cerrado.
+
+Procedimiento PL/SQL terminado correctamente.
+=== K1: definicion de la vista (COMPLETE, DEMAND) ===
+
+MVIEW_NAME             REFRESH_M REFRESH_ BUILD_MOD LAST_REF ULTIMO_REFRESCO  STALENESS       
+---------------------- --------- -------- --------- -------- ---------------- ----------------
+MV_OCUPACION_MENSUAL   DEMAND    COMPLETE IMMEDIATE COMPLETE 25/10/2026 20:04 FRESH           
+
+=== K2: una fila por alojamiento y mes, sin huecos ===
+
+     FILAS ALOJAMIENTOS      MESES   ESPERADO DESDE   HASTA   FILAS_SIN_OCUPACION
+---------- ------------ ---------- ---------- ------- ------- -------------------
+      2160           60         36       2160 01/2024 12/2026                  75
+
+=== K3: total de noches de la vista vs total de noches de las lineas (diferencia 0) ===
+
+DIFERENCIA
+----------
+         0
+
+=== K4: julio 2026 por alojamiento, vista vs calculo noche por noche (diferencia 0) ===
+
+ALOJAMIENTOS_CON_DIFERENCIA
+---------------------------
+                          0
+
+=== K5: ninguna ocupacion supera el 100 % (debe ser 0) ===
+
+FILAS_SOBRE_100
+---------------
+              0
+
+=== K6: uso de la vista: % de ocupacion por municipio y mes en 2025 ===
+
+MUNICIPIO               ENE        FEB        MAR        ABR        MAY        JUN        JUL        AGO        SEP        OCT        NOV        DIC
+---------------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+Armenia                20,7        8,3       11,3       21,7         12       22,5         24       12,6          9       15,5       14,4       22,7
+Buenavista             13,5          5        8,4         18        2,6       21,3       27,1       17,4          0        3,2       11,3       34,8
+Calarca                20,3        8,1       12,3       20,6       15,3       20,4       24,7       10,8          6       16,2        8,9       22,2
+Circasia               22,5        7,3       11,9       18,2       10,7       25,7       22,7       10,5        6,7       10,6       15,3       25,3
+Cordoba                 6,9       14,7         23       22,1       18,1         20       34,3       14,1       10,8       13,3       12,9       25,4
+Filandia               21,1        1,9       20,8       11,2       13,2       22,4         22       11,1          3       15,5        9,4       22,9
+Genova                 18,8        8,4       16,8       17,6         18       21,3         15       10,9        9,1       12,4       16,8       19,7
+La Tebaida             23,8        9,6       17,3       22,8       10,1       22,6         25        9,7        7,7       13,3       15,7       26,6
+Montenegro             23,3        8,1       12,6         21       14,5         23       24,7        7,9        8,1         11       16,6         24
+Pijao                  25,5        9,9       10,9       20,8       12,6       23,5       25,8       11,6        7,7       11,6       15,6       27,4
+Quimbaya               19,8        7,2       13,9       18,1       14,2       21,2       21,3       10,4        6,4       12,9       15,2       22,3
+
+MUNICIPIO               ENE        FEB        MAR        ABR        MAY        JUN        JUL        AGO        SEP        OCT        NOV        DIC
+---------------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
+Salento                23,9        7,4       14,2       17,7       10,6       23,1       24,3       10,6        6,9       13,6       13,7       25,2
+
+12 filas seleccionadas. 
+
+=== K7: los 5 alojamientos con mayor ocupacion en diciembre 2025 ===
+
+ALOJAMIENTO                                                                      HABITACIONES NOCHES_DISPONIBLES NOCHES_OCUPADAS PCT_OCUPACION
+-------------------------------------------------------------------------------- ------------ ------------------ --------------- -------------
+El Portal 43                                                                                6                186              76         40,86
+El Progreso 60                                                                              5                155              60         38,71
+El Carmen 54                                                                                4                124              46          37,1
+Mirador del Valle 24                                                                        7                217              76         35,02
+Villa Hermosa 52                                                                            5                155              54         34,84
+
+=== L1: job de refresco diario ===
+
+JOB_NAME                   ENABL STATE                REPEAT_INTERVAL                              NEXT_RUN_DATE                       
+-------------------------- ----- -------------------- -------------------------------------------- ------------------------------------
+JOB_REFRESCO_MV_OCUPACION  TRUE  SCHEDULED            FREQ=DAILY;BYHOUR=2;BYMINUTE=0;BYSECOND=0    26/10/26 02:00:00,355928000 AM GMT  
+
+=== L2: la vista solo cambia cuando se refresca ===
+Alojamiento 1, noches en nov 2026 antes: 40
+Reserva 25006 creada. Valor estadia: 608000
+Despues del COMMIT, sin refrescar: 40 (staleness = NEEDS_COMPILE)
+L2a sin refresco la vista no cambia (ON DEMAND)                        OK
+Despues de DBMS_MVIEW.REFRESH: 44
+L2b despues del refresco suma las 4 noches                             OK
+Despues de borrar la reserva y refrescar: 40
+L2c al borrar la reserva y refrescar vuelve al valor inicial           OK
+Resultado L: 3 OK, 0 FALLA (esperado: 3 OK, 0 FALLA)
+
+Procedimiento PL/SQL terminado correctamente.
