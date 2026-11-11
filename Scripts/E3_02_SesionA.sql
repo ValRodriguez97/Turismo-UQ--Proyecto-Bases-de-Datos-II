@@ -8,6 +8,7 @@
 --   ESCENARIO 1 (antes, sin FOR UPDATE):  A1 A2 | B1 B2 B3 | A3 | B4 | A4 A5
 --   ESCENARIO 2 (despues, con FOR UPDATE): A6 A7 | B5 (espera) | A7b | A8 | B6 | A9 A10
 --   ESCENARIO 3 (NOWAIT y WAIT):           A11 | B7 B8 B9 B10 | A12
+--   ESCENARIO 4 (deadlock):                A13 | B11 | A14 (espera) | B12 | A15 | B13
 --
 -- Antes de empezar:
 --   * E3_01_Transacciones.sql ya ejecutado (crea sp_crear_reserva_segura).
@@ -18,9 +19,10 @@
 --       GRANT SELECT ON v_$session TO proyecto;
 --   * Para ver los mensajes: Ver > Salida de DBMS y activarla en las dos sesiones.
 --
--- LIMPIEZA POR ID: antes de ejecutar A5 y A10, reemplazar los numeros de reserva de esas
--- instrucciones por los que imprimio DBMS_OUTPUT (A1 y B2 para A5; A6 para A10). Asi
--- solo se borra lo que creo el experimento.
+-- LIMPIEZA AUTOMATICA: A5 y A10 borran solo las reservas del experimento, que se
+-- reconocen porque son PENDIENTES, hechas HOY, de los clientes 1 y 2 y con check-in
+-- 1/12/2026 y check-out 4/12/2026. No hay que editar ningun id. Despues de cada
+-- limpieza hay una consulta de control que debe dar 0.
 --
 -- Las dos sesiones piden la misma habitacion para las mismas fechas: 1 al 4 de
 -- diciembre de 2026. Cada bloque busca la primera habitacion libre en esas fechas;
@@ -80,11 +82,29 @@ WHERE r.fecha_reserva = TRUNC(SYSDATE)
 ORDER BY r.id_reserva;
 
 -- A5: limpieza del escenario 1. NO saltarse este paso: la doble reserva no puede
---     quedar guardada en la base. REEMPLAZAR 25012 y 25013 por los ids que imprimieron
---     A1 (sesion A) y B2 (sesion B).
-DELETE FROM reserva_habitacion WHERE id_reserva IN (25012, 25013);
-DELETE FROM reserva WHERE id_reserva IN (25012, 25013);
+--     quedar guardada en la base. Borra las reservas de A1 y B2.
+DELETE FROM reserva_habitacion
+WHERE id_reserva IN (SELECT id_reserva FROM reserva
+                     WHERE fecha_reserva = TRUNC(SYSDATE)
+                       AND estado = 'pendiente'
+                       AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
+                       AND id_cliente IN (1, 2));
+
+DELETE FROM reserva
+WHERE fecha_reserva = TRUNC(SYSDATE)
+  AND estado = 'pendiente'
+  AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
+  AND id_cliente IN (1, 2);
+
 COMMIT;
+
+-- Control: debe dar 0
+SELECT COUNT(*) AS reservas_del_experimento_restantes
+FROM reserva
+WHERE fecha_reserva = TRUNC(SYSDATE)
+  AND estado = 'pendiente'
+  AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
+  AND id_cliente IN (1, 2);
 
 -- =================================================================================
 -- ESCENARIO 2 - DESPUES: sp_crear_reserva_segura con SELECT ... FOR UPDATE
@@ -146,11 +166,29 @@ WHERE r.fecha_reserva = TRUNC(SYSDATE)
   AND r.id_cliente IN (1, 2)
 ORDER BY r.id_reserva;
 
--- A10: limpieza del escenario 2. REEMPLAZAR 25014 por el id que imprimio A6
---      (en este escenario la sesion B no creo ninguna reserva).
-DELETE FROM reserva_habitacion WHERE id_reserva = 25014;
-DELETE FROM reserva WHERE id_reserva = 25014;
+-- A10: limpieza del escenario 2. Borra la reserva de A6 (la sesion B no creo ninguna).
+DELETE FROM reserva_habitacion
+WHERE id_reserva IN (SELECT id_reserva FROM reserva
+                     WHERE fecha_reserva = TRUNC(SYSDATE)
+                       AND estado = 'pendiente'
+                       AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
+                       AND id_cliente IN (1, 2));
+
+DELETE FROM reserva
+WHERE fecha_reserva = TRUNC(SYSDATE)
+  AND estado = 'pendiente'
+  AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
+  AND id_cliente IN (1, 2);
+
 COMMIT;
+
+-- Control: debe dar 0
+SELECT COUNT(*) AS reservas_del_experimento_restantes
+FROM reserva
+WHERE fecha_reserva = TRUNC(SYSDATE)
+  AND estado = 'pendiente'
+  AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
+  AND id_cliente IN (1, 2);
 
 -- =================================================================================
 -- ESCENARIO 3 - NOWAIT Y WAIT: decidir cuanto esperar
@@ -162,7 +200,7 @@ FROM habitacion
 WHERE id_habitacion = 1
 FOR UPDATE;
 
--- >>> Pasar a la sesion B: B7, B8, B9
+-- >>> Pasar a la sesion B: B7, B8, B9, B10
 
 -- A12: la sesion A suelta el candado
 ROLLBACK;
@@ -180,7 +218,10 @@ SELECT id_habitacion FROM habitacion WHERE id_habitacion = 1 FOR UPDATE;
 -- A14: A pide la habitacion 2, que B tiene apartada: se queda ESPERANDO
 SELECT id_habitacion FROM habitacion WHERE id_habitacion = 2 FOR UPDATE;
 
--- >>> Pasar a la sesion B: B12 (aqui se produce el deadlock)
+-- >>> Pasar a la sesion B: B12 (aqui se produce el deadlock). Volver a A y ejecutar A15.
 
--- A15: soltar el candado
+-- A15: soltar el candado. Oracle cancela solo UNA instruccion (normalmente B12). Si el
+--      ORA-00060 aparecio aqui, en A14, B12 sigue esperando hasta este ROLLBACK.
 ROLLBACK;
+
+-- >>> Pasar a la sesion B: B13
