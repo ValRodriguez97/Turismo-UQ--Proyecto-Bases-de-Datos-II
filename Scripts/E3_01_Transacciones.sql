@@ -2,26 +2,32 @@
 -- TurismoUQ - Entrega 3 - Entregable 1
 -- TRANSACCIONES: RESERVA + PAGO DE FORMA ATOMICA, CON SAVEPOINT Y ROLLBACK PARCIAL
 --   PARTE 1) Secuencia para los ids de PAGO
---   PARTE 2) Procedimiento sp_reservar_y_pagar
---   PARTE 3) Pruebas del procedimiento
+--   PARTE 2) Procedimiento sp_crear_reserva_segura (aparta la habitacion con FOR UPDATE)
+--   PARTE 3) Procedimiento sp_reservar_y_pagar
+--   PARTE 4) Pruebas del procedimiento
 --              T1 - exitoso con anticipo: reserva confirmada, queda saldo
 --              T2 - exitoso con pago total: reserva confirmada y PAGADA
 --              T3 - ROLLBACK PARCIAL: el pago excede el total (ORA-20031)
 --              T4 - ROLLBACK PARCIAL: metodo de pago invalido (ORA-20032)
 --              T5 - ROLLBACK TOTAL: la reserva falla, no queda nada
---   PARTE 4) Demostracion paso a paso del rollback parcial (SAVEPOINT a mano)
---   PARTE 5) Limpieza de los datos de prueba
+--              T6 - ROLLBACK PARCIAL: monto invalido, monto 0 (ORA-20030)
+--   PARTE 5) Demostracion paso a paso del rollback parcial (SAVEPOINT a mano)
+--   PARTE 6) Limpieza de los datos de prueba
 --
 -- Codigos de error propios (RAISE_APPLICATION_ERROR):
 --  - 20030 monto del pago invalido
 --  - 20031 el pago excede el total de la reserva
 --  - 20032 metodo de pago invalido
+--  - 20033 la habitacion esta siendo reservada por otra sesion (espera agotada)
 --
 -- Valentina Gonzalez Diaz
 -- Raquel Lopez Aristizabal
 -- Valentina Rodriguez Castro
 --
 -- Orden de ejecucion: DESPUES de los scripts de la Entrega 2 (usa pkg_turismouq).
+-- Este script crea sp_crear_reserva_segura, que tambien usa el experimento de
+-- concurrencia. Ese experimento se hace aparte, con dos sesiones, usando los guiones
+-- E3_02_SesionA.sql y E3_02_SesionB.sql (resultado y capturas en el documento Word).
 -- Ejecutar con F5. La evidencia queda en evidencia_entrega3_transacciones.txt (SPOOL).
 -- =================================================================================
 SET DEFINE OFF
@@ -57,7 +63,79 @@ END;
 /
 
 -- =================================================================================
--- PARTE 2 - PROCEDIMIENTO sp_reservar_y_pagar
+-- PARTE 2 - PROCEDIMIENTO sp_crear_reserva_segura
+-- ---------------------------------------------------------------------------------
+-- El problema: pkg_turismouq.sp_crear_reserva y el disparador trg_no_solape_reserva
+-- validan la disponibilidad con un SELECT COUNT(*) sin ningun bloqueo. En Oracle nadie
+-- ve lo que otra sesion no ha confirmado, asi que dos sesiones que piden la misma
+-- habitacion casi al tiempo pasan la validacion las dos y generan una DOBLE RESERVA
+-- (se demuestra en el experimento de concurrencia: E3_02_SesionA.sql, E3_02_SesionB.sql
+-- y el documento Word).
+--
+-- La solucion: antes de validar, se aparta la fila de la HABITACION con
+-- SELECT ... FOR UPDATE. Esa fila si es comun a las dos sesiones:
+--   * La primera sesion que llega toma el candado y sigue.
+--   * La segunda espera en el FOR UPDATE hasta que la primera haga COMMIT o ROLLBACK.
+--   * Cuando la segunda entra, su validacion ya ve la reserva confirmada de la primera
+--     y falla con ORA-20002 (habitacion no disponible).
+--
+-- El resto (validaciones, calculo del valor e INSERT) lo sigue haciendo
+-- pkg_turismouq.sp_crear_reserva: aqui solo se agrega el candado antes de llamarlo.
+-- No hace COMMIT: el candado se suelta cuando el que llama termina su transaccion.
+--
+-- Cuanto se espera: p_espera_seg (por defecto 5 segundos). Si la habitacion sigue
+-- apartada despues de ese tiempo, lanza ORA-20033 y el que llama puede ofrecer otra
+-- habitacion en vez de quedarse con la pantalla congelada. En sp_reservar_y_pagar ese
+-- error cae al EXCEPTION general: ROLLBACK total + RAISE. El experimento de
+-- concurrencia usa una espera larga (120 s) solo para alcanzar a tomar las capturas.
+-- =================================================================================
+CREATE OR REPLACE PROCEDURE sp_crear_reserva_segura (
+  p_id_cliente    IN  cliente.id_cliente%TYPE,
+  p_id_habitacion IN  habitacion.id_habitacion%TYPE,
+  p_checkin       IN  DATE,
+  p_checkout      IN  DATE,
+  p_num_huespedes IN  NUMBER,
+  p_id_reserva    OUT reserva.id_reserva%TYPE,
+  p_espera_seg    IN  NUMBER DEFAULT 5
+) IS
+  v_hab    habitacion.id_habitacion%TYPE;
+  v_espera PLS_INTEGER;
+  -- ORA-00054: recurso ocupado. ORA-30006: se agoto el tiempo de espera de WAIT n.
+  -- (En Oracle 23 Free el segundo caso tambien se informa como ORA-00054.)
+  e_hab_en_uso     EXCEPTION;
+  PRAGMA EXCEPTION_INIT(e_hab_en_uso, -54);
+  e_espera_agotada EXCEPTION;
+  PRAGMA EXCEPTION_INIT(e_espera_agotada, -30006);
+BEGIN
+  v_espera := GREATEST(1, TRUNC(NVL(p_espera_seg, 5)));
+
+  -- 1. Apartar la habitacion. Si otra sesion la tiene apartada, se espera como maximo
+  --    v_espera segundos. WAIT solo acepta un numero escrito en la sentencia (no una
+  --    variable), por eso se usa SQL dinamico; v_espera es un entero, no texto del usuario.
+  BEGIN
+    EXECUTE IMMEDIATE
+      'SELECT id_habitacion FROM habitacion WHERE id_habitacion = :1 FOR UPDATE WAIT '
+      || TO_CHAR(v_espera)
+      INTO v_hab USING p_id_habitacion;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RAISE_APPLICATION_ERROR(-20004,
+        'La habitacion ' || p_id_habitacion || ' no existe');
+    WHEN e_hab_en_uso OR e_espera_agotada THEN
+      RAISE_APPLICATION_ERROR(-20033,
+        'La habitacion ' || p_id_habitacion || ' esta siendo reservada por otra sesion. '
+        || 'Intente de nuevo en unos segundos');
+  END;
+
+  -- 2. Con la habitacion apartada, validar e insertar como siempre
+  pkg_turismouq.sp_crear_reserva(p_id_cliente, p_id_habitacion, p_checkin, p_checkout,
+                                 p_num_huespedes, p_id_reserva);
+END sp_crear_reserva_segura;
+/
+SHOW ERRORS PROCEDURE sp_crear_reserva_segura
+
+-- =================================================================================
+-- PARTE 3 - PROCEDIMIENTO sp_reservar_y_pagar
 -- ---------------------------------------------------------------------------------
 -- Registra una reserva y su primer pago (anticipo o pago total) como UNA sola
 -- transaccion. En Oracle la transaccion empieza sola con el primer INSERT y la
@@ -65,7 +143,8 @@ END;
 --
 -- La transaccion tiene dos pasos y un punto de guardado entre ellos:
 --
---   PASO 1: crear la reserva (encabezado + linea) con pkg_turismouq.sp_crear_reserva,
+--   PASO 1: crear la reserva (encabezado + linea) con sp_crear_reserva_segura, que primero
+--           aparta la habitacion con FOR UPDATE y luego llama a pkg_turismouq.sp_crear_reserva,
 --           que valida fechas, cliente, capacidad y disponibilidad. Queda 'pendiente'.
 --
 --   SAVEPOINT reserva_creada
@@ -75,6 +154,11 @@ END;
 --     2b. registrar el pago como 'exitoso'
 --     2c. verificar que la suma de pagos exitosos no exceda el total de la reserva
 --     2d. SOLO si todo lo anterior salio bien, confirmar la reserva
+--
+-- CONCURRENCIA:
+--   El candado de la habitacion (FOR UPDATE) se toma en el PASO 1, ANTES del SAVEPOINT.
+--   Por eso se mantiene aunque el pago falle y se haga ROLLBACK TO reserva_creada, y
+--   solo se suelta con el COMMIT o el ROLLBACK final del procedimiento.
 --
 -- REGLAS DE NEGOCIO QUE APLICA:
 --   * Total de la reserva = suma del valor de TODAS sus lineas (habitaciones) mas
@@ -134,8 +218,8 @@ CREATE OR REPLACE PROCEDURE sp_reservar_y_pagar (
   v_pagado    NUMBER;  -- suma de los pagos exitosos
 BEGIN
   -- PASO 1: la reserva. Si falla, el error sale al EXCEPTION general (rollback total)
-  pkg_turismouq.sp_crear_reserva(p_id_cliente, p_id_habitacion, p_checkin, p_checkout,
-                                 p_num_huespedes, p_id_reserva);
+  sp_crear_reserva_segura(p_id_cliente, p_id_habitacion, p_checkin, p_checkout,
+                          p_num_huespedes, p_id_reserva);
 
   -- Total de la reserva: TODAS las lineas mas los servicios
   SELECT NVL(SUM(valor_calculado), 0) INTO v_estadia
@@ -214,14 +298,22 @@ END sp_reservar_y_pagar;
 /
 SHOW ERRORS PROCEDURE sp_reservar_y_pagar
 
+-- Verificar que los dos procedimientos existen y son validos (STATUS = VALID) antes de
+-- las pruebas y antes del experimento de concurrencia:
+COLUMN object_name FORMAT A30
+SELECT object_name, object_type, status
+FROM user_objects
+WHERE object_name IN ('SP_CREAR_RESERVA_SEGURA', 'SP_RESERVAR_Y_PAGAR')
+ORDER BY object_name;
+
 -- =================================================================================
--- PARTE 3 - PRUEBAS DEL PROCEDIMIENTO
+-- PARTE 4 - PRUEBAS DEL PROCEDIMIENTO
 -- ---------------------------------------------------------------------------------
 -- Las variables de enlace guardan la habitacion y los ids de las reservas de prueba,
--- para consultarlas entre una prueba y otra y borrarlas al final (PARTE 5).
+-- para consultarlas entre una prueba y otra y borrarlas al final (PARTE 6).
 --
 -- Fechas de prueba (diciembre de 2026) sobre una misma habitacion libre, 2 noches
--- cada una:  T1: 1 al 3 | T2: 3 al 5 | T3: 5 al 7 | T4: 7 al 9 | PARTE 4: 9 al 11
+-- cada una:  T1: 1 al 3 | T2: 3 al 5 | T3: 5 al 7 | T4: 7 al 9 | PARTE 5: 9 al 11 | T6: 11 al 13
 -- El dia de salida queda libre para el siguiente ingreso, por eso no se cruzan.
 -- =================================================================================
 VARIABLE b_hab NUMBER
@@ -230,8 +322,9 @@ VARIABLE b_res2 NUMBER
 VARIABLE b_res3 NUMBER
 VARIABLE b_res4 NUMBER
 VARIABLE b_res5 NUMBER
+VARIABLE b_res6 NUMBER
 
--- Habitacion libre del 1 al 11 de diciembre de 2026
+-- Habitacion libre del 1 al 13 de diciembre de 2026
 BEGIN
   SELECT MIN(h.id_habitacion) INTO :b_hab
   FROM habitacion h
@@ -239,7 +332,7 @@ BEGIN
                       JOIN reserva r ON r.id_reserva = rh.id_reserva
                      WHERE rh.id_habitacion = h.id_habitacion
                        AND r.estado <> 'cancelada'
-                       AND rh.fecha_checkin_linea  < DATE '2026-12-11'
+                       AND rh.fecha_checkin_linea  < DATE '2026-12-13'
                        AND rh.fecha_checkout_linea > DATE '2026-12-01');
   DBMS_OUTPUT.PUT_LINE('Habitacion de prueba: ' || :b_hab);
 END;
@@ -388,7 +481,31 @@ SELECT (SELECT COUNT(*) FROM reserva) AS reservas,
 FROM dual;
 
 -- =================================================================================
--- PARTE 4 - DEMOSTRACION PASO A PASO DEL ROLLBACK PARCIAL
+-- T6 - ROLLBACK PARCIAL: MONTO INVALIDO (ORA-20030)
+-- Reserva del 11 al 13 de diciembre con un pago de monto 0.
+-- La reserva se crea (paso 1), el paso 2 rechaza el monto y el ROLLBACK TO la deja intacta.
+-- Esperado: la reserva EXISTE, esta 'pendiente' y tiene 0 pagos.
+-- =================================================================================
+PROMPT === T6: rollback parcial (monto invalido) ===
+DECLARE
+  v_pago pago.id_pago%TYPE;
+BEGIN
+  sp_reservar_y_pagar(2, :b_hab, DATE '2026-12-11', DATE '2026-12-13', 1,
+                      0, 'efectivo', :b_res6, v_pago);
+
+  DBMS_OUTPUT.PUT_LINE('T6 -> reserva ' || :b_res6 || ', pago ' || NVL(TO_CHAR(v_pago), 'NULL') ||
+                       CASE WHEN :b_res6 IS NOT NULL AND v_pago IS NULL
+                            THEN ' OK' ELSE ' FALLA' END);
+END;
+/
+
+SELECT r.id_reserva, r.estado,
+       (SELECT COUNT(*) FROM pago p WHERE p.id_reserva = r.id_reserva) AS pagos
+FROM reserva r
+WHERE r.id_reserva = :b_res6;
+
+-- =================================================================================
+-- PARTE 5 - DEMOSTRACION PASO A PASO DEL ROLLBACK PARCIAL
 -- ---------------------------------------------------------------------------------
 -- Lo mismo que hace el procedimiento por dentro, pero instruccion por instruccion,
 -- consultando el estado en cada momento para VER que deshace cada ROLLBACK.
@@ -438,18 +555,18 @@ ROLLBACK;
 SELECT COUNT(*) AS reserva_demo_existe FROM reserva WHERE id_reserva = :b_res5;
 
 -- =================================================================================
--- PARTE 5 - LIMPIEZA
+-- PARTE 6 - LIMPIEZA
 -- ---------------------------------------------------------------------------------
--- T1 a T4 quedaron guardadas con COMMIT. Se borran para dejar la base como estaba:
+-- T1 a T4 y T6 quedaron guardadas con COMMIT. Se borran para dejar la base como estaba:
 -- primero los hijos (pago, linea) y despues la reserva, por las claves foraneas.
 -- El conteo final debe ser igual al de T0.
 -- Los numeros que ya entregaron las secuencias no se devuelven: quedan huecos en
 -- los ids, lo cual es normal (una secuencia no hace parte de la transaccion).
 -- =================================================================================
 PROMPT === Limpieza: borrar las reservas de prueba ===
-DELETE FROM pago WHERE id_reserva IN (:b_res1, :b_res2, :b_res3, :b_res4);
-DELETE FROM reserva_habitacion WHERE id_reserva IN (:b_res1, :b_res2, :b_res3, :b_res4);
-DELETE FROM reserva WHERE id_reserva IN (:b_res1, :b_res2, :b_res3, :b_res4);
+DELETE FROM pago WHERE id_reserva IN (:b_res1, :b_res2, :b_res3, :b_res4, :b_res6);
+DELETE FROM reserva_habitacion WHERE id_reserva IN (:b_res1, :b_res2, :b_res3, :b_res4, :b_res6);
+DELETE FROM reserva WHERE id_reserva IN (:b_res1, :b_res2, :b_res3, :b_res4, :b_res6);
 COMMIT;
 
 PROMPT === Filas DESPUES de la limpieza (igual a T0) ===

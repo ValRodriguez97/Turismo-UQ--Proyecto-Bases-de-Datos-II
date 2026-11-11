@@ -6,14 +6,21 @@
 -- dentro de la instruccion), alternando con E3_02_SesionB.sql en este orden:
 --
 --   ESCENARIO 1 (antes, sin FOR UPDATE):  A1 A2 | B1 B2 B3 | A3 | B4 | A4 A5
---   ESCENARIO 2 (despues, con FOR UPDATE): A6 A7 | B5 (espera) | A8 | B6 | A9 A10
---   ESCENARIO 3 (NOWAIT y WAIT):           A11 | B7 B8 B9 | A12
+--   ESCENARIO 2 (despues, con FOR UPDATE): A6 A7 | B5 (espera) | A7b | A8 | B6 | A9 A10
+--   ESCENARIO 3 (NOWAIT y WAIT):           A11 | B7 B8 B9 B10 | A12
 --
 -- Antes de empezar:
---   * E3_02_Concurrencia.sql ya ejecutado (crea sp_crear_reserva_segura).
+--   * E3_01_Transacciones.sql ya ejecutado (crea sp_crear_reserva_segura).
 --   * Autocommit apagado: Herramientas > Preferencias > Base de datos > Avanzada.
 --   * La sesion B se abre con Ctrl + Shift + N (hoja no compartida = otra sesion).
+--   * Para el paso A7b, una sola vez, conectado como SYSTEM:
+--       ALTER SESSION SET CONTAINER = FREEPDB1;
+--       GRANT SELECT ON v_$session TO proyecto;
 --   * Para ver los mensajes: Ver > Salida de DBMS y activarla en las dos sesiones.
+--
+-- LIMPIEZA POR ID: antes de ejecutar A5 y A10, reemplazar los numeros de reserva de esas
+-- instrucciones por los que imprimio DBMS_OUTPUT (A1 y B2 para A5; A6 para A10). Asi
+-- solo se borra lo que creo el experimento.
 --
 -- Las dos sesiones piden la misma habitacion para las mismas fechas: 1 al 4 de
 -- diciembre de 2026. Cada bloque busca la primera habitacion libre en esas fechas;
@@ -72,19 +79,11 @@ WHERE r.fecha_reserva = TRUNC(SYSDATE)
   AND r.id_cliente IN (1, 2)
 ORDER BY r.id_reserva;
 
--- A5: limpieza del escenario 1 (las tres instrucciones). NO saltarse este paso: la
---     doble reserva no puede quedar guardada en la base.
-DELETE FROM reserva_habitacion
-WHERE id_reserva IN (SELECT id_reserva FROM reserva
-                     WHERE fecha_reserva = TRUNC(SYSDATE)
-                       AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
-                       AND id_cliente IN (1, 2));
-
-DELETE FROM reserva
-WHERE fecha_reserva = TRUNC(SYSDATE)
-  AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
-  AND id_cliente IN (1, 2);
-
+-- A5: limpieza del escenario 1. NO saltarse este paso: la doble reserva no puede
+--     quedar guardada en la base. REEMPLAZAR 25012 y 25013 por los ids que imprimieron
+--     A1 (sesion A) y B2 (sesion B).
+DELETE FROM reserva_habitacion WHERE id_reserva IN (25012, 25013);
+DELETE FROM reserva WHERE id_reserva IN (25012, 25013);
 COMMIT;
 
 -- =================================================================================
@@ -122,6 +121,16 @@ ORDER BY r.id_reserva;
 
 -- >>> Pasar a la sesion B: B5. La sesion B se queda ESPERANDO (tomar la captura)
 
+-- >>> Volver a esta sesion A (esta libre) y ejecutar A7b ANTES de A8
+
+-- A7b: mientras B esta esperando, A consulta quien bloquea a quien. Debe aparecer la
+--      sesion B con blocking_session = sid de la sesion A y el evento
+--      "enq: TX - row lock contention". (Tomar la captura aqui, antes de A8.)
+SELECT sid, username, status, event, seconds_in_wait, blocking_session
+FROM v$session
+WHERE blocking_session IS NOT NULL
+  AND username = USER;
+
 -- A8: la sesion A confirma. En ese momento la sesion B se libera y recibe ORA-20002
 COMMIT;
 
@@ -137,18 +146,10 @@ WHERE r.fecha_reserva = TRUNC(SYSDATE)
   AND r.id_cliente IN (1, 2)
 ORDER BY r.id_reserva;
 
--- A10: limpieza del escenario 2 (las tres instrucciones)
-DELETE FROM reserva_habitacion
-WHERE id_reserva IN (SELECT id_reserva FROM reserva
-                     WHERE fecha_reserva = TRUNC(SYSDATE)
-                       AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
-                       AND id_cliente IN (1, 2));
-
-DELETE FROM reserva
-WHERE fecha_reserva = TRUNC(SYSDATE)
-  AND checkin = DATE '2026-12-01' AND checkout = DATE '2026-12-04'
-  AND id_cliente IN (1, 2);
-
+-- A10: limpieza del escenario 2. REEMPLAZAR 25014 por el id que imprimio A6
+--      (en este escenario la sesion B no creo ninguna reserva).
+DELETE FROM reserva_habitacion WHERE id_reserva = 25014;
+DELETE FROM reserva WHERE id_reserva = 25014;
 COMMIT;
 
 -- =================================================================================
@@ -164,4 +165,22 @@ FOR UPDATE;
 -- >>> Pasar a la sesion B: B7, B8, B9
 
 -- A12: la sesion A suelta el candado
+ROLLBACK;
+
+-- =================================================================================
+-- ESCENARIO 4 - DEADLOCK: dos sesiones, dos habitaciones, en orden contrario
+-- Orden: A13 | B11 | A14 (espera) | B12 (ORA-00060) | A15 y B13
+-- =================================================================================
+
+-- A13: A aparta la habitacion 1
+SELECT id_habitacion FROM habitacion WHERE id_habitacion = 1 FOR UPDATE;
+
+-- >>> Pasar a la sesion B: B11
+
+-- A14: A pide la habitacion 2, que B tiene apartada: se queda ESPERANDO
+SELECT id_habitacion FROM habitacion WHERE id_habitacion = 2 FOR UPDATE;
+
+-- >>> Pasar a la sesion B: B12 (aqui se produce el deadlock)
+
+-- A15: soltar el candado
 ROLLBACK;

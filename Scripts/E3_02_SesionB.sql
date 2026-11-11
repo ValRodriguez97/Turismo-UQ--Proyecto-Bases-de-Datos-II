@@ -6,8 +6,8 @@
 -- NO compartida (Ctrl + Shift + N), alternando con E3_02_SesionA.sql en este orden:
 --
 --   ESCENARIO 1 (antes, sin FOR UPDATE):  A1 A2 | B1 B2 B3 | A3 | B4 | A4 A5
---   ESCENARIO 2 (despues, con FOR UPDATE): A6 A7 | B5 (espera) | A8 | B6 | A9 A10
---   ESCENARIO 3 (NOWAIT y WAIT):           A11 | B7 B8 B9 | A12
+--   ESCENARIO 2 (despues, con FOR UPDATE): A6 A7 | B5 (espera) | A7b | A8 | B6 | A9 A10
+--   ESCENARIO 3 (NOWAIT y WAIT):           A11 | B7 B8 B9 B10 | A12
 -- =================================================================================
 SET SERVEROUTPUT ON
 
@@ -71,6 +71,8 @@ COMMIT;
 --     Se queda ESPERANDO en el FOR UPDATE: la sesion A tiene apartada la habitacion.
 --     (Tomar la captura mientras espera.) Cuando A hace COMMIT (A8), B se libera y
 --     recibe ORA-20002: Habitacion no disponible.
+--     Se pasa una espera de 120 segundos (el ultimo parametro) para que alcance el tiempo
+--     de ejecutar A7b y tomar las capturas; por defecto el procedimiento espera solo 5.
 DECLARE
   v_hab NUMBER;
   v_id  reserva.id_reserva%TYPE;
@@ -84,7 +86,7 @@ BEGIN
                        AND rh.fecha_checkin_linea  < DATE '2026-12-04'
                        AND rh.fecha_checkout_linea > DATE '2026-12-01');
 
-  sp_crear_reserva_segura(2, v_hab, DATE '2026-12-01', DATE '2026-12-04', 1, v_id);
+  sp_crear_reserva_segura(2, v_hab, DATE '2026-12-01', DATE '2026-12-04', 1, v_id, 120);
   DBMS_OUTPUT.PUT_LINE('SESION B: habitacion ' || v_hab || ', reserva ' || v_id);
 END;
 /
@@ -118,4 +120,32 @@ SELECT id_habitacion, numero_habitacion, capacidad_max
 FROM habitacion
 WHERE id_habitacion = 1;
 
+-- B10: el procedimiento seguro con su espera por defecto (5 segundos). La sesion A sigue
+--      teniendo apartada la habitacion 1 (A11). B espera 5 segundos y recibe ORA-20033:
+--      "La habitacion 1 esta siendo reservada por otra sesion".
+DECLARE
+  v_id reserva.id_reserva%TYPE;
+BEGIN
+  sp_crear_reserva_segura(2, 1, DATE '2026-12-01', DATE '2026-12-04', 1, v_id);
+END;
+/
+
 -- >>> Pasar a la sesion A: A12
+
+-- =================================================================================
+-- ESCENARIO 4 - DEADLOCK
+-- =================================================================================
+
+-- B11: B aparta la habitacion 2
+SELECT id_habitacion FROM habitacion WHERE id_habitacion = 2 FOR UPDATE;
+
+-- >>> Pasar a la sesion A: A14 (se queda esperando)
+
+-- B12: B pide la habitacion 1, que A tiene apartada. Ahora cada una espera a la otra:
+--      Oracle detecta el deadlock en pocos segundos y cancela UNA de las dos
+--      instrucciones con ORA-00060 (deadlock detected while waiting for resource).
+SELECT id_habitacion FROM habitacion WHERE id_habitacion = 1 FOR UPDATE;
+
+-- B13: soltar el candado (la instruccion que fallo se deshizo, pero B sigue
+--      teniendo apartada la habitacion 2)
+ROLLBACK;
