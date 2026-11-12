@@ -1,0 +1,346 @@
+Procedimiento PL/SQL terminado correctamente.
+=== 0.1: indices que ya existen en las tablas del proyecto ===
+
+TABLE_NAME           INDEX_NAME                       INDEX_TYPE               UNIQUENESS
+-------------------- -------------------------------- ------------------------ ----------
+CLIENTE              CLIENTE_CEDULA_UQ                NORMAL                   UNIQUE    
+CLIENTE              CLIENTE_CORREO_UQ                NORMAL                   UNIQUE    
+CLIENTE              CLIENTE_PK                       NORMAL                   UNIQUE    
+RESERVA              RESERVA_PK                       NORMAL                   UNIQUE    
+RESERVA_SERVICIO     RESERVA_SERVICIO_PK              NORMAL                   UNIQUE    
+SERVICIO             SERVICIO_PK                      NORMAL                   UNIQUE    
+
+6 filas seleccionadas. 
+
+=== 0.2: columnas de cada indice (columna lider primero) ===
+
+TABLE_NAME           INDEX_NAME                       COLUMN_NAME          COLUMN_POSITION
+-------------------- -------------------------------- -------------------- ---------------
+CLIENTE              CLIENTE_CEDULA_UQ                CEDULA                             1
+CLIENTE              CLIENTE_CORREO_UQ                CORREO                             1
+CLIENTE              CLIENTE_PK                       ID_CLIENTE                         1
+RESERVA              RESERVA_PK                       ID_RESERVA                         1
+RESERVA_SERVICIO     RESERVA_SERVICIO_PK              ID_RESERVA_SERVICIO                1
+SERVICIO             SERVICIO_PK                      ID_SERVICIO                        1
+
+6 filas seleccionadas. 
+
+=== Q1 sin indice: plan antes ===
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3566217236
+ 
+----------------------------------------------------------
+| Id  | Operation         | Name    | Rows  | Cost (%CPU)|
+----------------------------------------------------------
+|   0 | SELECT STATEMENT  |         |     3 |    68   (0)|
+|*  1 |  TABLE ACCESS FULL| RESERVA |     3 |    68   (0)|
+----------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("R"."ID_CLIENTE"=1 AND "R"."CHECKIN">=TO_DATE(' 
+              2025-01-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss') AND 
+              "R"."CHECKIN"<TO_DATE(' 2026-01-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss') 
+              AND "CHECKOUT">TO_DATE(' 2025-01-01 00:00:00', 'syyyy-mm-dd 
+              hh24:mi:ss'))
+
+17 filas seleccionadas. 
+
+=== Q1 con indice compuesto ===
+
+Index IDX_RESERVA_CLIENTE_CHECKIN creado.
+
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1619981181
+ 
+------------------------------------------------------------------------------------------------
+| Id  | Operation                           | Name                        | Rows  | Cost (%CPU)|
+------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                    |                             |     3 |     5   (0)|
+|*  1 |  TABLE ACCESS BY INDEX ROWID BATCHED| RESERVA                     |     3 |     5   (0)|
+|*  2 |   INDEX RANGE SCAN                  | IDX_RESERVA_CLIENTE_CHECKIN |     3 |     2   (0)|
+------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("CHECKOUT">TO_DATE(' 2025-01-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss'))
+   2 - access("R"."ID_CLIENTE"=1 AND "R"."CHECKIN">=TO_DATE(' 2025-01-01 00:00:00', 
+              'syyyy-mm-dd hh24:mi:ss') AND "R"."CHECKIN"<TO_DATE(' 2026-01-01 00:00:00', 
+              'syyyy-mm-dd hh24:mi:ss'))
+
+17 filas seleccionadas. 
+
+=== Q1 control: la consulta devuelve las mismas filas ===
+
+FILAS_DEVUELTAS
+---------------
+              2
+
+Procedimiento PL/SQL terminado correctamente.
+
+CORREO_BUSCADO                                                                                                                  
+--------------------------------------------------------------------------------------------------------------------------------
+Raul.Mora1500@Yahoo.Com
+
+=== Q2 sin indice funcional: plan antes ===
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1138695813
+ 
+----------------------------------------------------------
+| Id  | Operation         | Name    | Rows  | Cost (%CPU)|
+----------------------------------------------------------
+|   0 | SELECT STATEMENT  |         |    30 |    11   (0)|
+|*  1 |  TABLE ACCESS FULL| CLIENTE |    30 |    11   (0)|
+----------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(LOWER("CORREO")=LOWER(:B_CORREO))
+
+13 filas seleccionadas. 
+
+=== Q2 con indice funcional ===
+
+Index FX_CLIENTE_CORREO_LOWER creado.
+
+Procedimiento PL/SQL terminado correctamente.
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3854453449
+ 
+--------------------------------------------------------------------------------------------
+| Id  | Operation                           | Name                    | Rows  | Cost (%CPU)|
+--------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                    |                         |     1 |     2   (0)|
+|   1 |  TABLE ACCESS BY INDEX ROWID BATCHED| CLIENTE                 |     1 |     2   (0)|
+|*  2 |   INDEX RANGE SCAN                  | FX_CLIENTE_CORREO_LOWER |     1 |     1   (0)|
+--------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access(LOWER("CORREO")=LOWER(:B_CORREO))
+
+14 filas seleccionadas. 
+
+=== Q2 control: mismo resultado, con y sin indice ===
+
+FILAS_DEVUELTAS
+---------------
+              1
+
+Procedimiento PL/SQL terminado correctamente.
+
+RESERVA_CON_SERVICIOS
+---------------------
+                 9475
+
+=== Q3 sin indice: plan antes ===
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2365082695
+ 
+------------------------------------------------------------------------------
+| Id  | Operation                    | Name             | Rows  | Cost (%CPU)|
+------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |                  |     4 |    71   (2)|
+|   1 |  MERGE JOIN                  |                  |     4 |    71   (2)|
+|   2 |   TABLE ACCESS BY INDEX ROWID| SERVICIO         |    30 |     2   (0)|
+|   3 |    INDEX FULL SCAN           | SERVICIO_PK      |    30 |     1   (0)|
+|*  4 |   SORT JOIN                  |                  |     4 |    69   (2)|
+|*  5 |    TABLE ACCESS FULL         | RESERVA_SERVICIO |     4 |    68   (0)|
+------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   4 - access("S"."ID_SERVICIO"="RS"."ID_SERVICIO")
+       filter("S"."ID_SERVICIO"="RS"."ID_SERVICIO")
+   5 - filter("RS"."ID_RESERVA"=TO_NUMBER(:B_RES_SERV))
+
+19 filas seleccionadas. 
+
+=== Q3 con indice ===
+
+Index IDX_RES_SERV_RESERVA creado.
+
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1948160780
+ 
+-------------------------------------------------------------------------------------------
+| Id  | Operation                             | Name                 | Rows  | Cost (%CPU)|
+-------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                      |                      |     4 |     9  (12)|
+|   1 |  MERGE JOIN                           |                      |     4 |     9  (12)|
+|   2 |   TABLE ACCESS BY INDEX ROWID         | SERVICIO             |    30 |     2   (0)|
+|   3 |    INDEX FULL SCAN                    | SERVICIO_PK          |    30 |     1   (0)|
+|*  4 |   SORT JOIN                           |                      |     4 |     7  (15)|
+|   5 |    TABLE ACCESS BY INDEX ROWID BATCHED| RESERVA_SERVICIO     |     4 |     6   (0)|
+|*  6 |     INDEX RANGE SCAN                  | IDX_RES_SERV_RESERVA |     4 |     1   (0)|
+-------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   4 - access("S"."ID_SERVICIO"="RS"."ID_SERVICIO")
+       filter("S"."ID_SERVICIO"="RS"."ID_SERVICIO")
+   6 - access("RS"."ID_RESERVA"=TO_NUMBER(:B_RES_SERV))
+
+20 filas seleccionadas. 
+
+=== Q3 control: filas devueltas (mismas con y sin indice) ===
+
+ID_RESERVA_SERVICIO   CANTIDAD PRECIO_UNITARIO NOMBRE                                                      
+------------------- ---------- --------------- ------------------------------------------------------------
+              22270          2           47300 Tour cafetero                                               
+              35527          2           47300 Tour cafetero                                               
+                845          1           47300 Tour cafetero                                               
+               8368          2           47300 Tour cafetero                                               
+              31333          1           47300 Tour cafetero                                               
+              38244          2           47300 Tour cafetero                                               
+              28999          1           47300 Tour cafetero                                               
+              22493          1           47300 Tour cafetero                                               
+              28819          2           59500 Cena tipica                                                 
+              38654          2           59500 Cena tipica                                                 
+              38482          2           59500 Cena tipica                                                 
+              23539          1           59500 Cena tipica                                                 
+              22086          2           59500 Cena tipica                                                 
+              15994          2           59500 Cena tipica                                                 
+              15180          1           59500 Cena tipica                                                 
+              10129          1           59500 Cena tipica                                                 
+               5804          1           59500 Cena tipica                                                 
+
+17 filas seleccionadas. 
+
+=== Q4 sin indice: plan antes ===
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3566217236
+ 
+----------------------------------------------------------
+| Id  | Operation         | Name    | Rows  | Cost (%CPU)|
+----------------------------------------------------------
+|   0 | SELECT STATEMENT  |         | 19084 |    68   (0)|
+|*  1 |  TABLE ACCESS FULL| RESERVA | 19084 |    68   (0)|
+----------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("ESTADO"='completada')
+
+13 filas seleccionadas. 
+
+=== Q4 con indice B-tree sobre estado: plan despues ===
+
+Index IDX_RESERVA_ESTADO creado.
+
+
+Explicado.
+
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3566217236
+ 
+----------------------------------------------------------
+| Id  | Operation         | Name    | Rows  | Cost (%CPU)|
+----------------------------------------------------------
+|   0 | SELECT STATEMENT  |         | 19084 |    68   (0)|
+|*  1 |  TABLE ACCESS FULL| RESERVA | 19084 |    68   (0)|
+----------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("ESTADO"='completada')
+
+13 filas seleccionadas. 
+
+=== Q4 control: filas con estado completada ===
+
+COMPLETADAS
+-----------
+      19084
+
+=== Q4: por que no ayuda - cardinalidad real de estado ===
+
+ESTADO            FILAS        PCT
+------------ ---------- ----------
+completada        19084      76,34
+cancelada          2829      11,32
+pendiente          1656       6,62
+confirmada         1431       5,72
+
+=== 5.1: indices finales (los tres utiles + idx_reserva_estado de Q4) ===
+
+TABLE_NAME           INDEX_NAME                       INDEX_TYPE               UNIQUENESS
+-------------------- -------------------------------- ------------------------ ----------
+CLIENTE              CLIENTE_CEDULA_UQ                NORMAL                   UNIQUE    
+CLIENTE              CLIENTE_CORREO_UQ                NORMAL                   UNIQUE    
+CLIENTE              CLIENTE_PK                       NORMAL                   UNIQUE    
+CLIENTE              FX_CLIENTE_CORREO_LOWER          FUNCTION-BASED NORMAL    NONUNIQUE 
+RESERVA              IDX_RESERVA_CLIENTE_CHECKIN      NORMAL                   NONUNIQUE 
+RESERVA              IDX_RESERVA_ESTADO               NORMAL                   NONUNIQUE 
+RESERVA              RESERVA_PK                       NORMAL                   UNIQUE    
+RESERVA_SERVICIO     IDX_RES_SERV_RESERVA             NORMAL                   NONUNIQUE 
+RESERVA_SERVICIO     RESERVA_SERVICIO_PK              NORMAL                   UNIQUE    
+SERVICIO             SERVICIO_PK                      NORMAL                   UNIQUE    
+
+10 filas seleccionadas. 
+
+=== 5.2: se borra el indice de Q4, que no mejoro el plan ===
+
+Index IDX_RESERVA_ESTADO borrado.
+
+=== 5.3: quedan solo los tres indices que si sirven ===
+
+TABLE_NAME           INDEX_NAME                       INDEX_TYPE               UNIQUENESS
+-------------------- -------------------------------- ------------------------ ----------
+CLIENTE              CLIENTE_CEDULA_UQ                NORMAL                   UNIQUE    
+CLIENTE              CLIENTE_CORREO_UQ                NORMAL                   UNIQUE    
+CLIENTE              CLIENTE_PK                       NORMAL                   UNIQUE    
+CLIENTE              FX_CLIENTE_CORREO_LOWER          FUNCTION-BASED NORMAL    NONUNIQUE 
+RESERVA              IDX_RESERVA_CLIENTE_CHECKIN      NORMAL                   NONUNIQUE 
+RESERVA              RESERVA_PK                       NORMAL                   UNIQUE    
+RESERVA_SERVICIO     IDX_RES_SERV_RESERVA             NORMAL                   NONUNIQUE 
+RESERVA_SERVICIO     RESERVA_SERVICIO_PK              NORMAL                   UNIQUE    
+SERVICIO             SERVICIO_PK                      NORMAL                   UNIQUE    
+
+9 filas seleccionadas. 
+

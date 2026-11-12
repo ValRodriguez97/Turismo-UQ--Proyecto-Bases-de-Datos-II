@@ -338,7 +338,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
 
             IF p_num_huespedes IS NULL OR p_num_huespedes < 1 THEN
                   RAISE_APPLICATION_ERROR(-20008,
-                  'Numero de huespedos invalido: debe ser al menos 1');
+                  'Numero de huespedes invalido: debe ser al menos 1');
             END IF;
 
             IF p_num_huespedes > v_capacidad THEN 

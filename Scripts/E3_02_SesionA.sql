@@ -16,7 +16,8 @@
 --   * La sesion B se abre con Ctrl + Shift + N (hoja no compartida = otra sesion).
 --   * Para el paso A7b, una sola vez, conectado como SYSTEM:
 --       ALTER SESSION SET CONTAINER = FREEPDB1;
---       GRANT SELECT ON v_$session TO proyecto;
+--       GRANT SELECT_CATALOG_ROLE TO proyecto;
+--       GRANT SELECT ON sys.v_$session TO proyecto;
 --   * Para ver los mensajes: Ver > Salida de DBMS y activarla en las dos sesiones.
 --
 -- LIMPIEZA AUTOMATICA: A5 y A10 borran solo las reservas del experimento, que se

@@ -1,0 +1,139 @@
+Procedimiento PL/SQL terminado correctamente.
+
+Procedure SP_CREAR_RESERVA_SEGURA compilado
+
+Sin errores.
+
+Procedure SP_RESERVAR_Y_PAGAR compilado
+
+Sin errores.
+
+OBJECT_NAME                    OBJECT_TYPE             STATUS 
+------------------------------ ----------------------- -------
+SP_CREAR_RESERVA_SEGURA        PROCEDURE               VALID  
+SP_RESERVAR_Y_PAGAR            PROCEDURE               VALID  
+
+Habitacion de prueba: 3
+
+Procedimiento PL/SQL terminado correctamente.
+=== T0: filas ANTES de las pruebas ===
+
+  RESERVAS     LINEAS      PAGOS
+---------- ---------- ----------
+     25000      29486      33732
+
+=== T1: exitoso con anticipo del 30 % ===
+Reserva 25007 creada. Valor estadia: 234000
+Pago 33733 registrado por 70200. Reserva 25007 confirmada.
+Anticipo recibido: pagado 70200 de 234000. Saldo pendiente: 163800.
+T1 -> reserva 25007, pago 33733 OK
+
+Procedimiento PL/SQL terminado correctamente.
+=== T2: exitoso con pago total ===
+Reserva 25008 creada. Valor estadia: 234000
+Pago 33734 registrado por 234000. Reserva 25008 confirmada.
+Reserva PAGADA: los pagos exitosos (234000) cubren el total (234000).
+T2 -> reserva 25008, pago 33734 OK
+
+Procedimiento PL/SQL terminado correctamente.
+=== T3: rollback parcial (el pago excede el total) ===
+Reserva 25009 creada. Valor estadia: 234000
+El pago no se registro: ORA-20031: El pago excede el total de la reserva: pagado 2340000, total 234000
+ROLLBACK TO reserva_creada: la reserva 25009 se conserva en estado pendiente.
+T3 -> reserva 25009, pago NULL OK
+
+Procedimiento PL/SQL terminado correctamente.
+=== T4: rollback parcial (metodo de pago invalido) ===
+Reserva 25010 creada. Valor estadia: 234000
+El pago no se registro: ORA-20032: Metodo de pago invalido: bitcoin
+ROLLBACK TO reserva_creada: la reserva 25010 se conserva en estado pendiente.
+T4 -> reserva 25010, pago NULL OK
+
+Procedimiento PL/SQL terminado correctamente.
+=== Resumen T1 a T4 (despues de un ROLLBACK que no deshace nada) ===
+Rollback terminado.
+
+ID_RESERVA ESTADO            TOTAL      PAGOS     PAGADO SITUACION   
+---------- ------------ ---------- ---------- ---------- ------------
+     25007 confirmada       234000          1      70200 CON SALDO   
+     25008 confirmada       234000          1     234000 PAGADA      
+     25009 pendiente        234000          0          0 CON SALDO   
+     25010 pendiente        234000          0          0 CON SALDO   
+
+=== T5: rollback total (la reserva falla, no queda nada) ===
+T5 -> OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 02/12/2026 y 04/12/2026
+
+Procedimiento PL/SQL terminado correctamente.
+
+  RESERVAS     LINEAS      PAGOS
+---------- ---------- ----------
+     25004      29490      33734
+
+=== T6: rollback parcial (monto invalido) ===
+Reserva 25011 creada. Valor estadia: 234000
+El pago no se registro: ORA-20030: Monto invalido: el pago debe ser mayor que cero
+ROLLBACK TO reserva_creada: la reserva 25011 se conserva en estado pendiente.
+T6 -> reserva 25011, pago NULL OK
+
+Procedimiento PL/SQL terminado correctamente.
+
+ID_RESERVA ESTADO            PAGOS
+---------- ------------ ----------
+     25011 pendiente             0
+
+=== D1: crear la reserva (queda pendiente, sin COMMIT) ===
+Reserva 25012 creada. Valor estadia: 234000
+
+Procedimiento PL/SQL terminado correctamente.
+
+ID_RESERVA ESTADO            PAGOS
+---------- ------------ ----------
+     25012 pendiente             0
+
+=== D2: punto de guardado ===
+
+Savepoint creado.
+
+=== D3: registrar un pago equivocado (un cero de mas) y confirmar la reserva ===
+
+1 fila insertadas.
+
+
+1 fila actualizadas.
+
+
+ID_RESERVA ESTADO            PAGOS TOTAL_PAGADO
+---------- ------------ ---------- ------------
+     25012 confirmada            1      5000000
+
+=== D4: ROLLBACK TO reserva_creada (rollback parcial) ===
+Rollback terminado.
+
+ID_RESERVA ESTADO            PAGOS
+---------- ------------ ----------
+     25012 pendiente             0
+
+=== D5: ROLLBACK (rollback total): la reserva de la demostracion desaparece (0) ===
+Rollback terminado.
+
+RESERVA_DEMO_EXISTE
+-------------------
+                  0
+
+=== Limpieza: borrar las reservas de prueba ===
+
+2 filas eliminado
+
+
+5 filas eliminado
+
+
+5 filas eliminado
+
+Confirmación terminada.
+=== Filas DESPUES de la limpieza (igual a T0) ===
+
+  RESERVAS     LINEAS      PAGOS
+---------- ---------- ----------
+     25000      29486      33732
+
