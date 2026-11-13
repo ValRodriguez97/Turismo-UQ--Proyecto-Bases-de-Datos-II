@@ -13,10 +13,19 @@
 | 6 | E2_03_Tablespace_VistaMaterializada.sql | usuario del proyecto |
 | 7 | E2_04_Pruebas.sql | usuario del proyecto |
 | 8 | E3_01_Transacciones.sql | usuario del proyecto |
-| 9 | E3_02_Concurrencia.sql | usuario del proyecto |
+| 9 | E3_02_SesionA.sql | usuario del proyecto |
+| 10 | E3_02_SesionB.sql | usuario del proyecto |
+| 11 | E3_03_Indices.sql | usuario del proyecto |
+| 12 | E3_04_Roles_Usuarios_Grant_Vistas.sql | conectado como SYSTEM | 
 
-Experimento de concurrencia (no se ejecutan con F5): E3_02_SesionA.sql y E3_02_SesionB.sql,
-paso a paso con Ctrl + Enter en dos sesiones. Resultado en Documentacion/E3_02_Concurrencia_TurismoUQ.docx
 
-Salida de las pruebas: evidencia_entrega2.txt
-Integrantes: Valentina Gonzalez Diaz, Raquel Lopez Aristizabal, Valentina Rodriguez Castro
+Salida de las pruebas: 
+- evidencia_entrega2.txt
+- evidencia_entrega3_indices.txt
+- evidencia_entrega3_transacciones.txt
+- evidencia_seguridad.txt
+
+Integrantes:
+- Valentina Gonzalez Diaz - Código: 1094898396
+- Raquel Lopez Aristizabal - Código: 1091884575
+- Valentina Rodriguez Castro - Código: 1016833647
