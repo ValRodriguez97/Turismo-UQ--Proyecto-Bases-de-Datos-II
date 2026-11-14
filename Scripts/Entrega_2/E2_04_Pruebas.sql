@@ -3,6 +3,11 @@
 -- vista materializada)
 -- Ejecutar con F5 DESPUES de los scripts E2_01, E2_02 y E2_03.
 -- La evidencia queda en evidencia_entrega2.txt (SPOOL).
+--
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
+--
 -- =================================================================================
 SET DEFINE OFF
 WHENEVER SQLERROR CONTINUE

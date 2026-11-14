@@ -2,6 +2,10 @@
 -- TurismoUQ - Entrega 3 - Entregable 2
 -- CONCURRENCIA: GUION DE LA SESION A
 --
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
+--
 -- NO se ejecuta con F5. Se ejecuta UN paso a la vez con Ctrl + Enter (con el cursor
 -- dentro de la instruccion), alternando con E3_02_SesionB.sql en este orden:
 --
@@ -14,10 +18,7 @@
 --   * E3_01_Transacciones.sql ya ejecutado (crea sp_crear_reserva_segura).
 --   * Autocommit apagado: Herramientas > Preferencias > Base de datos > Avanzada.
 --   * La sesion B se abre con Ctrl + Shift + N (hoja no compartida = otra sesion).
---   * Para el paso A7b, una sola vez, conectado como SYSTEM:
---       ALTER SESSION SET CONTAINER = FREEPDB1;
---       GRANT SELECT_CATALOG_ROLE TO proyecto;
---       GRANT SELECT ON sys.v_$session TO proyecto;
+--   * Para el paso A7b, se debe haber ejecutado E0_00_system.s1l
 --   * Para ver los mensajes: Ver > Salida de DBMS y activarla en las dos sesiones.
 --
 -- LIMPIEZA AUTOMATICA: A5 y A10 borran solo las reservas del experimento, que se
@@ -140,7 +141,7 @@ WHERE r.fecha_reserva = TRUNC(SYSDATE)
   AND r.id_cliente IN (1, 2)
 ORDER BY r.id_reserva;
 
--- >>> Pasar a la sesion B: B5. La sesion B se queda ESPERANDO (tomar la captura)
+-- >>> Pasar a la sesion B: B5. La sesion B se queda ESPERANDO 
 
 -- >>> Volver a esta sesion A (esta libre) y ejecutar A7b ANTES de A8
 

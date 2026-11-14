@@ -1,15 +1,13 @@
 -- =================================================================================
 -- TurismoUQ - Entrega 1 - Entregable 4
 -- SIETE CONSULTAS DE ANALISIS
--- Bases de Datos II - codigo 12338 - periodo 2026-2
--- Oracle XE 21c
 --
 -- Orden de ejecucion: este script se ejecuta DESPUES de Script.sql (DDL)
 -- y de Carga_TurismoUQ.sql (datos).
 --
--- Raquel Lopez Aristizabal
--- Valentina Gonzalez Diaz
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 -- =================================================================================
 
 SET DEFINE ON

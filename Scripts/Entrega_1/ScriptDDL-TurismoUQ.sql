@@ -3,9 +3,10 @@
 -- Base de datos para la gestión de reservas de alojamientos
 -- turísticos en el Quindío.
 --
--- Raquel Lopez Aristizabal
--- Valentina Gonzalez Diaz
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
+--
 -- =============================================================
 
 -- 1. MUNICIPIO

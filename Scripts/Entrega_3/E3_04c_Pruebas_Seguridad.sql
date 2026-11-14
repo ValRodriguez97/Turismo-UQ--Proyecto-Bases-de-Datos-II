@@ -2,9 +2,9 @@
 -- TurismoUQ - Entrega 3 - Entregable 4 (seguridad) - ARCHIVO C de 4
 -- E3_04c: PRUEBAS DE SEGURIDAD POR ROL Y DEL PERFIL  ->  genera evidencia_seguridad.txt
 --
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- COMO EJECUTARLO: despues de E3_04a y E3_04b.
 -- Pide DOS claves (no quedan escritas en el repo):

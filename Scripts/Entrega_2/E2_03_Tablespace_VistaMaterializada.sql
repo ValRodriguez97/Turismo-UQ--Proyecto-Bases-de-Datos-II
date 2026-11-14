@@ -1,18 +1,18 @@
 -- =================================================================================
 -- TurismoUQ - Entrega 2 - Entregable 3
 -- TABLESPACE DEL HISTORICO Y VISTA MATERIALIZADA DE OCUPACION MENSUAL
---   PARTE A) En SYSTEM: crear el tablespace TS_HISTORICO y dar permisos
+--   PARTE A) Tablespace TS_HISTORICO creado en E0_00_system.sql
 --   PARTE B) Justificacion del tablespace
 --   PARTE C) Tabla RESERVA_HISTORICO particionada por RANGE en TS_HISTORICO
 --   PARTE D) Vista materializada MV_OCUPACION_MENSUAL
 --   PARTE E) Politica de refresco: justificacion y job programado
 --
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- Orden de ejecucion: DESPUES de E2_02_Disparadores.sql y ANTES de E2_04_Pruebas.sql
--- Los permisos se ejecuta UNA vez en la conexion SYSTEM, ejecutar antes E2_00_system.sql
+-- Los permisos se ejecuta UNA vez en la conexion SYSTEM, ejecutar antes E0_00_system.sql
 -- =================================================================================
 
 
@@ -30,7 +30,7 @@ BEGIN
 
   IF v_ok = 0 THEN
     RAISE_APPLICATION_ERROR(-20999,
-      'Falta TS_HISTORICO o la cuota del usuario: ejecutar primero E2_00_system.sql como SYSTEM.');
+      'Falta TS_HISTORICO o la cuota del usuario: ejecutar primero E0_00_system.sql como SYSTEM.');
   END IF;
 END;
 /

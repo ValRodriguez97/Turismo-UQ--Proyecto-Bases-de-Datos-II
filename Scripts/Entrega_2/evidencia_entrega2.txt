@@ -1,12 +1,12 @@
 
 POR_FUNCION     MANUAL
 ----------- ----------
-     456000     456000
+     474000     474000
 
 
 POR_FUNCION     MANUAL
 ----------- ----------
-     792000     792000
+     788000     788000
 
 OK (esperado): ORA-20006: Hay 2 noche(s) sin temporada o tarifa vigente para la habitacion 1
 
@@ -19,7 +19,7 @@ DIFERENCIAS
 OK (esperado): ORA-20004: La habitacion 999999 no existe
 
 Procedimiento PL/SQL terminado correctamente.
-Reserva 25004 creada. Valor estadia: 657000
+Reserva 25001 creada. Valor estadia: 447000
 OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 03/11/2026 y 06/11/2026
 
 Procedimiento PL/SQL terminado correctamente.
@@ -37,64 +37,64 @@ OK (esperado): ORA-20008: Numero de huespedes invalido: debe ser al menos 1
 
 Procedimiento PL/SQL terminado correctamente.
 === 2f: reserva con varias habitaciones ===
-Reserva 25005 creada. Valor estadia: 351000
-Habitacion 5 agregada a la reserva 25005. Valor: 324000
-Lineas de la reserva 25005: 2 (esperado 2)
-OK (esperado): ORA-20011: La reserva 25005 ya tiene habitaciones de otro alojamiento; la habitacion 9 es del alojamiento 2. Una reserva solo puede tener habitaciones de un alojamiento.
+Reserva 25002 creada. Valor estadia: 291000
+Habitacion 5 agregada a la reserva 25002. Valor: 324000
+Lineas de la reserva 25002: 2 (esperado 2)
+OK (esperado): ORA-20011: La reserva 25002 ya tiene habitaciones de otro alojamiento; la habitacion 9 es del alojamiento 2. Una reserva solo puede tener habitaciones de un alojamiento.
 ORA-06512: en "PROYECTO.TRG_RESERVA_UN_ALOJAMIENTO", línea 22
 ORA-04088: error durante la ejecución del disparador 'PROYECTO.TRG_RESERVA_UN_ALOJAMIENTO'
 
 Procedimiento PL/SQL terminado correctamente.
 LIQUIDACION 07/2026
-El Recuerdo 1                    reservas:  11 | total: 9,391,000
-El Lago 2                        reservas:  54 | total: 119,041,700
-La Union 3                       reservas:  14 | total: 23,182,000
-Villa Nueva 4                    reservas:  11 | total: 18,769,500
-La Cumbre 5                      reservas:   6 | total: 20,308,100
-El Jardin 6                      reservas:  17 | total: 19,367,000
-El Faro 7                        reservas:  15 | total: 27,057,200
-El Portal 8                      reservas:   5 | total: 8,656,000
-El Progreso 9                    reservas:   5 | total: 9,090,800
-El Paraiso 10                    reservas:  43 | total: 81,936,000
-La Finca Real 11                 reservas:   9 | total: 11,899,600
-Villa Lucia 12                   reservas:  59 | total: 92,586,200
-La Victoria 13                   reservas:   7 | total: 10,948,000
-Casa Blanca 14                   reservas:  13 | total: 18,008,700
-El Roble 15                      reservas:  15 | total: 17,311,700
-Casa Blanca 16                   reservas:  52 | total: 66,634,000
-Los Naranjos 17                  reservas:   4 | total: 3,614,500
-Villa Hermosa 18                 reservas:   5 | total: 4,354,000
-San Jose 19                      reservas:   7 | total: 16,776,200
-La Aurora 20                     reservas:  15 | total: 32,770,000
-El Mirador 21                    reservas:  50 | total: 59,426,000
-El Progreso 22                   reservas:   7 | total: 8,724,100
-La Casona 23                     reservas:  12 | total: 16,339,000
-Mirador del Valle 24             reservas:  13 | total: 23,983,600
-La Colina 25                     reservas:   7 | total: 14,350,000
-El Faro 26                       reservas:   6 | total: 9,049,000
-El Parador 27                    reservas:  64 | total: 82,374,000
-Don Pedro 28                     reservas:  47 | total: 84,685,100
-Los Almendros 29                 reservas:  53 | total: 89,808,800
-La Esperanza 30                  reservas:  12 | total: 8,419,000
-El Camino 31                     reservas:  10 | total: 7,716,000
-El Diamante 32                   reservas:   4 | total: 4,373,000
-Los Pinos 33                     reservas:  61 | total: 63,340,000
-Los Andes 34                     reservas:   6 | total: 9,040,200
-El Diamante 35                   reservas:  10 | total: 19,473,800
-Las Flores 36                    reservas:   9 | total: 16,930,000
-Samanes 37                       reservas:   9 | total: 16,596,000
-La Union 38                      reservas:  11 | total: 11,352,000
-La Colina 39                     reservas:   6 | total: 6,833,000
-La Cumbre 40                     reservas:   3 | total: 16,695,000
-La Colina 41                     reservas:  20 | total: 21,233,000
-Los Andes 42                     reservas:   8 | total: 10,330,000
-El Portal 43                     reservas:  13 | total: 14,041,800
-Santa Fe 44                      reservas:  12 | total: 20,921,500
-Las Palmas 45                    reservas:  46 | total: 63,606,000
-La Estrella 46                   reservas:  13 | total: 19,439,600
-Villa del Rio 47                 reservas:   4 | total: 12,983,100
-El Recuerdo 48                   reservas:  12 | total: 18,456,000
-El Triunfo 49                    reservas:  55 | total: 52,007,000
+El Recuerdo 1                    reservas:  11 | total: 9,014,000
+El Lago 2                        reservas:  54 | total: 125,676,700
+La Union 3                       reservas:  14 | total: 22,810,000
+Villa Nueva 4                    reservas:  11 | total: 22,021,500
+La Cumbre 5                      reservas:   6 | total: 21,959,100
+El Jardin 6                      reservas:  17 | total: 19,148,000
+El Faro 7                        reservas:  15 | total: 29,354,200
+El Portal 8                      reservas:   5 | total: 9,823,000
+El Progreso 9                    reservas:   5 | total: 8,794,800
+El Paraiso 10                    reservas:  43 | total: 79,595,000
+La Finca Real 11                 reservas:   9 | total: 12,102,600
+Villa Lucia 12                   reservas:  59 | total: 83,205,200
+La Victoria 13                   reservas:   7 | total: 12,353,000
+Casa Blanca 14                   reservas:  13 | total: 17,684,700
+El Roble 15                      reservas:  15 | total: 19,649,700
+Casa Blanca 16                   reservas:  52 | total: 66,507,000
+Los Naranjos 17                  reservas:   4 | total: 3,736,500
+Villa Hermosa 18                 reservas:   5 | total: 5,207,000
+San Jose 19                      reservas:   7 | total: 16,992,200
+La Aurora 20                     reservas:  15 | total: 30,749,000
+El Mirador 21                    reservas:  50 | total: 59,978,000
+El Progreso 22                   reservas:   7 | total: 7,554,100
+La Casona 23                     reservas:  12 | total: 16,549,000
+Mirador del Valle 24             reservas:  13 | total: 19,391,600
+La Colina 25                     reservas:   7 | total: 12,009,000
+El Faro 26                       reservas:   6 | total: 9,120,000
+El Parador 27                    reservas:  64 | total: 87,785,000
+Don Pedro 28                     reservas:  47 | total: 83,423,100
+Los Almendros 29                 reservas:  53 | total: 92,539,800
+La Esperanza 30                  reservas:  12 | total: 9,491,000
+El Camino 31                     reservas:  10 | total: 7,265,000
+El Diamante 32                   reservas:   4 | total: 3,303,000
+Los Pinos 33                     reservas:  61 | total: 68,880,000
+Los Andes 34                     reservas:   6 | total: 9,005,200
+El Diamante 35                   reservas:  10 | total: 21,621,800
+Las Flores 36                    reservas:   9 | total: 20,388,000
+Samanes 37                       reservas:   9 | total: 16,042,000
+La Union 38                      reservas:  11 | total: 11,574,000
+La Colina 39                     reservas:   6 | total: 5,177,000
+La Cumbre 40                     reservas:   3 | total: 15,880,000
+La Colina 41                     reservas:  20 | total: 20,750,000
+Los Andes 42                     reservas:   8 | total: 10,261,000
+El Portal 43                     reservas:  13 | total: 13,001,800
+Santa Fe 44                      reservas:  12 | total: 16,572,500
+Las Palmas 45                    reservas:  46 | total: 62,132,000
+La Estrella 46                   reservas:  13 | total: 19,232,600
+Villa del Rio 47                 reservas:   4 | total: 14,432,100
+El Recuerdo 48                   reservas:  12 | total: 18,120,000
+El Triunfo 49                    reservas:  55 | total: 56,384,000
 San Jose 50                      reservas:   4 | total: 8,084,000
 El Portal 51                     reservas:  13 | total: 21,828,000
 Villa Hermosa 52                 reservas:   6 | total: 4,582,000
@@ -107,99 +107,99 @@ Don Pedro 58                     reservas:   4 | total: 4,186,000
 Mirador del Valle 59             reservas:   6 | total: 5,668,000
 El Progreso 60                   reservas:  10 | total: 9,252,000
 Alojamientos liquidados: 60 de 60 recorridos
-TOTAL GENERAL: 1,579,102,800
+TOTAL GENERAL: 1,589,120,800
 
 Procedimiento PL/SQL terminado correctamente.
 
 NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
 -------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
-El Lago 2                                                                                54             345         91931000          27110700       119041700
-Villa Lucia 12                                                                           59             244         68439000          24147200        92586200
-Los Almendros 29                                                                         53             291         66705000          23103800        89808800
-Don Pedro 28                                                                             47             286         64987000          19698100        84685100
-El Parador 27                                                                            64             341         82374000                 0        82374000
-El Paraiso 10                                                                            43             273         65271000          16665000        81936000
-Casa Blanca 16                                                                           52             243         66634000                 0        66634000
-Las Palmas 45                                                                            46             249         63606000                 0        63606000
-Los Pinos 33                                                                             61             239         63340000                 0        63340000
-El Mirador 21                                                                            50             238         59426000                 0        59426000
+El Lago 2                                                                                54             345         98566000          27110700       125676700
+Los Almendros 29                                                                         53             291         69436000          23103800        92539800
+El Parador 27                                                                            64             341         87785000                 0        87785000
+Don Pedro 28                                                                             47             286         63725000          19698100        83423100
+Villa Lucia 12                                                                           59             244         59058000          24147200        83205200
+El Paraiso 10                                                                            43             273         62930000          16665000        79595000
+Los Pinos 33                                                                             61             239         68880000                 0        68880000
+Casa Blanca 16                                                                           52             243         66507000                 0        66507000
+Las Palmas 45                                                                            46             249         62132000                 0        62132000
+El Mirador 21                                                                            50             238         59978000                 0        59978000
+El Triunfo 49                                                                            55             245         56384000                 0        56384000
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
 El Descanso 57                                                                           53             245         54416000                 0        54416000
-
-NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
--------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
-El Triunfo 49                                                                            55             245         52007000                 0        52007000
-La Aurora 20                                                                             15             101         32770000                 0        32770000
-El Faro 7                                                                                15              80         19700000           7357200        27057200
-Mirador del Valle 24                                                                     13              67         20119000           3864600        23983600
-La Union 3                                                                               14              87         23182000                 0        23182000
+La Aurora 20                                                                             15             101         30749000                 0        30749000
+El Faro 7                                                                                15              80         21997000           7357200        29354200
+La Union 3                                                                               14              87         22810000                 0        22810000
+Villa Nueva 4                                                                            11              89         19024000           2997500        22021500
+La Cumbre 5                                                                               6              49         21243000            716100        21959100
 El Portal 51                                                                             13              87         21828000                 0        21828000
-La Colina 41                                                                             20              77         21233000                 0        21233000
-Santa Fe 44                                                                              12              50         15348000           5573500        20921500
-La Cumbre 5                                                                               6              49         19592000            716100        20308100
-El Diamante 35                                                                           10              49         17965000           1508800        19473800
-La Estrella 46                                                                           13              58         13550000           5889600        19439600
+El Diamante 35                                                                           10              49         20113000           1508800        21621800
+La Colina 41                                                                             20              77         20750000                 0        20750000
+Las Flores 36                                                                             9              51         19233000           1155000        20388000
+El Roble 15                                                                              15              56         17706000           1943700        19649700
 
 NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
 -------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
-El Jardin 6                                                                              17              70         19367000                 0        19367000
+Mirador del Valle 24                                                                     13              67         15527000           3864600        19391600
+La Estrella 46                                                                           13              58         13343000           5889600        19232600
 Casa Blanca 56                                                                           12              55         19153000                 0        19153000
-Villa Nueva 4                                                                            11              89         15772000           2997500        18769500
+El Jardin 6                                                                              17              70         19148000                 0        19148000
 El Carmen 54                                                                              8              43         18649000                 0        18649000
-El Recuerdo 48                                                                           12              56         18456000                 0        18456000
-Casa Blanca 14                                                                           13              52         13166000           4842700        18008700
-El Roble 15                                                                              15              56         15368000           1943700        17311700
-Las Flores 36                                                                             9              51         15775000           1155000        16930000
-San Jose 19                                                                               7              51         15023000           1753200        16776200
-La Cumbre 40                                                                              3              38         15260000           1435000        16695000
-Samanes 37                                                                                9              36         12636000           3960000        16596000
+El Recuerdo 48                                                                           12              56         18120000                 0        18120000
+Casa Blanca 14                                                                           13              52         12842000           4842700        17684700
+San Jose 19                                                                               7              51         15239000           1753200        16992200
+Santa Fe 44                                                                              12              50         10999000           5573500        16572500
+La Casona 23                                                                             12              66         16549000                 0        16549000
+Samanes 37                                                                                9              36         12082000           3960000        16042000
 
 NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
 -------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
-La Casona 23                                                                             12              66         16339000                 0        16339000
-La Colina 25                                                                              7              46         14350000                 0        14350000
-El Portal 43                                                                             13              38         11745000           2296800        14041800
-Villa del Rio 47                                                                          4              24         11748000           1235100        12983100
-La Finca Real 11                                                                          9              45          7314000           4585600        11899600
+La Cumbre 40                                                                              3              38         14445000           1435000        15880000
+Villa del Rio 47                                                                          4              24         13197000           1235100        14432100
+El Portal 43                                                                             13              38         10705000           2296800        13001800
+La Victoria 13                                                                            7              57         12353000                 0        12353000
+La Finca Real 11                                                                          9              45          7517000           4585600        12102600
+La Colina 25                                                                              7              46         12009000                 0        12009000
+La Union 38                                                                              11              65         11574000                 0        11574000
 Santa Fe 55                                                                              10              45         11510000                 0        11510000
-La Union 38                                                                              11              65         11352000                 0        11352000
-La Victoria 13                                                                            7              57         10948000                 0        10948000
-Los Andes 42                                                                              8              32         10330000                 0        10330000
-El Recuerdo 1                                                                            11              45          9391000                 0         9391000
+Los Andes 42                                                                              8              32         10261000                 0        10261000
+El Portal 8                                                                               5              30          9823000                 0         9823000
+La Esperanza 30                                                                          12              36          7983000           1508000         9491000
+
+NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
+-------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
 El Progreso 60                                                                           10              48          9252000                 0         9252000
-
-NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
--------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
-El Progreso 9                                                                             5              24          7958000           1132800         9090800
-El Faro 26                                                                                6              46          9049000                 0         9049000
-Los Andes 34                                                                              6              34          7323000           1717200         9040200
-El Progreso 22                                                                            7              27          7817000            907100         8724100
-El Portal 8                                                                               5              30          8656000                 0         8656000
-La Esperanza 30                                                                          12              36          6911000           1508000         8419000
+El Faro 26                                                                                6              46          9120000                 0         9120000
+El Recuerdo 1                                                                            11              45          9014000                 0         9014000
+Los Andes 34                                                                              6              34          7288000           1717200         9005200
+El Progreso 9                                                                             5              24          7662000           1132800         8794800
 San Jose 50                                                                               4              16          8084000                 0         8084000
-El Camino 31                                                                             10              33          7716000                 0         7716000
+El Progreso 22                                                                            7              27          6647000            907100         7554100
 El Encuentro 53                                                                           9              38          7547000                 0         7547000
-La Colina 39                                                                              6              23          6833000                 0         6833000
+El Camino 31                                                                             10              33          7265000                 0         7265000
 Mirador del Valle 59                                                                      6              36          5668000                 0         5668000
+Villa Hermosa 18                                                                          5              28          5207000                 0         5207000
 
 NOMBRE                                                                             RESERVAS NOCHES_VENDIDAS INGRESO_ESTADIAS INGRESO_SERVICIOS TOTAL_LIQUIDADO
 -------------------------------------------------------------------------------- ---------- --------------- ---------------- ----------------- ---------------
+La Colina 39                                                                              6              23          5177000                 0         5177000
 Villa Hermosa 52                                                                          6              21          4582000                 0         4582000
-El Diamante 32                                                                            4              28          4373000                 0         4373000
-Villa Hermosa 18                                                                          5              28          4354000                 0         4354000
 Don Pedro 58                                                                              4              19          4186000                 0         4186000
-Los Naranjos 17                                                                           4              16          2503000           1111500         3614500
+Los Naranjos 17                                                                           4              16          2625000           1111500         3736500
+El Diamante 32                                                                            4              28          3303000                 0         3303000
 
 60 filas seleccionadas. 
 
 
 CONTROL_ESTADIAS
 ----------------
-      1410887000
+      1420905000
 
 
 EN_LIQUIDACION
 --------------
-    1410887000
+    1420905000
 
 
 CONTROL_SERVICIOS
@@ -215,9 +215,9 @@ EN_LIQUIDACION
 
  ID_TARIFA PRECIO_NOCHE
 ---------- ------------
-         1       184000
-         2       131000
-         3       219000
+         1       703000
+         2       503000
+         3       840000
 
 === A2: UN solo UPDATE sube 10.000 a tres tarifas ===
 
@@ -226,9 +226,9 @@ EN_LIQUIDACION
 
 ID_AUDITORIA  ID_TARIFA ID_USUARIO PRECIO_ANTERIOR PRECIO_NUEVO FECHA_CAMBIO        MOTIVO                                                      
 ------------ ---------- ---------- --------------- ------------ ------------------- ------------------------------------------------------------
-           4          1          1          184000       194000 25/10/2026 20:11:47 Cambio de precio hecho por el usuario de BD PROYECTO        
-           5          2          1          131000       141000 25/10/2026 20:11:47 Cambio de precio hecho por el usuario de BD PROYECTO        
-           6          3          1          219000       229000 25/10/2026 20:11:47 Cambio de precio hecho por el usuario de BD PROYECTO        
+           1          1          1          703000       713000 14/11/2026 22:11:48 Cambio de precio hecho por el usuario de BD PROYECTO        
+           2          2          1          503000       513000 14/11/2026 22:11:48 Cambio de precio hecho por el usuario de BD PROYECTO        
+           3          3          1          840000       850000 14/11/2026 22:11:48 Cambio de precio hecho por el usuario de BD PROYECTO        
 
 === A3: UPDATE que NO cambia el precio (solo la fecha): no debe auditar ===
 
@@ -463,7 +463,7 @@ Procedimiento PL/SQL terminado correctamente.
 
 MVIEW_NAME             REFRESH_M REFRESH_ BUILD_MOD LAST_REF ULTIMO_REFRESCO  STALENESS       
 ---------------------- --------- -------- --------- -------- ---------------- ----------------
-MV_OCUPACION_MENSUAL   DEMAND    COMPLETE IMMEDIATE COMPLETE 25/10/2026 20:04 FRESH           
+MV_OCUPACION_MENSUAL   DEMAND    COMPLETE IMMEDIATE COMPLETE 14/11/2026 22:08 FRESH           
 
 === K2: una fila por alojamiento y mes, sin huecos ===
 
@@ -525,11 +525,11 @@ Villa Hermosa 52                                                                
 
 JOB_NAME                   ENABL STATE                REPEAT_INTERVAL                              NEXT_RUN_DATE                       
 -------------------------- ----- -------------------- -------------------------------------------- ------------------------------------
-JOB_REFRESCO_MV_OCUPACION  TRUE  SCHEDULED            FREQ=DAILY;BYHOUR=2;BYMINUTE=0;BYSECOND=0    26/10/26 02:00:00,355928000 AM GMT  
+JOB_REFRESCO_MV_OCUPACION  TRUE  SCHEDULED            FREQ=DAILY;BYHOUR=2;BYMINUTE=0;BYSECOND=0    15/11/26 02:00:00,331104000 AM GMT  
 
 === L2: la vista solo cambia cuando se refresca ===
 Alojamiento 1, noches en nov 2026 antes: 40
-Reserva 25006 creada. Valor estadia: 608000
+Reserva 25003 creada. Valor estadia: 632000
 Despues del COMMIT, sin refrescar: 40 (staleness = NEEDS_COMPILE)
 L2a sin refresco la vista no cambia (ON DEMAND)                        OK
 Despues de DBMS_MVIEW.REFRESH: 44

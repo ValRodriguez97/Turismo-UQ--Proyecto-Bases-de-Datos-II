@@ -1,8 +1,9 @@
 -- =============================================================
 -- TurismoUQ 
--- Raquel Lopez Aristizabal
--- Valentina Gonzalez Diaz
--- Valentina Rodríguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
+--
 -- =============================================================
 SET DEFINE OFF;
 WHENEVER SQLERROR EXIT SQL.SQLCODE;

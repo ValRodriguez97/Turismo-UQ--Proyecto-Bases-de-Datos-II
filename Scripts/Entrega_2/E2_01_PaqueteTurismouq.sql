@@ -2,14 +2,14 @@
 -- TurismoUQ - Entrega 2 - Capa PL/SQL
 -- SCRIPT 1: FUNCION, PROCEDIMIENTO, CURSOR Y PAQUETE
 -- 
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- Orden de ejecución: despues del DDL y de la carga de datos
 -- =======================================================
 
--- Los privilegios y la cuota se otorgan en E2_00_system.sql (Conexión SYSTEM)
+-- Los privilegios y la cuota se otorgan en E0_00_system.sql (Conexión SYSTEM)
 
 -- =======================================================
 -- 0. OBJETOS DE APOYO

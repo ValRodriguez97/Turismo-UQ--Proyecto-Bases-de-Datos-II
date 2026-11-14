@@ -2,9 +2,9 @@
 -- TurismoUQ - Entrega 3 - Entregable 4 (seguridad) - ARCHIVO D de 4
 -- E3_04d: PRUEBA REAL DEL PERFIL PERFIL_TURISMOUQ (pasos manuales con capturas)
 --
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- Despues de E3_04a, E3_04b y E3_04c. No ejecutar de corrido.
 -- =================================================================================

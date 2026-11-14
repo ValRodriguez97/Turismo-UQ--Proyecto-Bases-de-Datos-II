@@ -1,5 +1,7 @@
 Procedimiento PL/SQL terminado correctamente.
-=== 0.1: indices que ya existen en las tablas del proyecto ===
+=== 0.1: estadisticas del esquema ===
+Procedimiento PL/SQL terminado correctamente.
+=== 0.2: indices que ya existen en las tablas del proyecto ===
 
 TABLE_NAME           INDEX_NAME                       INDEX_TYPE               UNIQUENESS
 -------------------- -------------------------------- ------------------------ ----------
@@ -7,12 +9,14 @@ CLIENTE              CLIENTE_CEDULA_UQ                NORMAL                   U
 CLIENTE              CLIENTE_CORREO_UQ                NORMAL                   UNIQUE    
 CLIENTE              CLIENTE_PK                       NORMAL                   UNIQUE    
 RESERVA              RESERVA_PK                       NORMAL                   UNIQUE    
+RESERVA_HABITACION   RESERVA_HABITACION_PK            NORMAL                   UNIQUE    
+RESERVA_HABITACION   RESERVA_HABITACION_UQ            NORMAL                   UNIQUE    
 RESERVA_SERVICIO     RESERVA_SERVICIO_PK              NORMAL                   UNIQUE    
 SERVICIO             SERVICIO_PK                      NORMAL                   UNIQUE    
 
-6 filas seleccionadas. 
+8 filas seleccionadas. 
 
-=== 0.2: columnas de cada indice (columna lider primero) ===
+=== 0.3: columnas de cada indice (columna lider primero) ===
 
 TABLE_NAME           INDEX_NAME                       COLUMN_NAME          COLUMN_POSITION
 -------------------- -------------------------------- -------------------- ---------------
@@ -20,10 +24,24 @@ CLIENTE              CLIENTE_CEDULA_UQ                CEDULA                    
 CLIENTE              CLIENTE_CORREO_UQ                CORREO                             1
 CLIENTE              CLIENTE_PK                       ID_CLIENTE                         1
 RESERVA              RESERVA_PK                       ID_RESERVA                         1
+RESERVA_HABITACION   RESERVA_HABITACION_PK            ID_RESERVA_HAB                     1
+RESERVA_HABITACION   RESERVA_HABITACION_UQ            ID_RESERVA                         1
+RESERVA_HABITACION   RESERVA_HABITACION_UQ            ID_HABITACION                      2
 RESERVA_SERVICIO     RESERVA_SERVICIO_PK              ID_RESERVA_SERVICIO                1
 SERVICIO             SERVICIO_PK                      ID_SERVICIO                        1
 
-6 filas seleccionadas. 
+9 filas seleccionadas. 
+
+Procedimiento PL/SQL terminado correctamente.
+Procedimiento PL/SQL terminado correctamente.
+
+HABITACION_CONSULTADA DESDE
+--------------------- --------------------------------------------------------------------------------------------------------------------------------
+HASTA                                                                                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+                  640 2026-12-21                                                                                                                       
+2026-12-27                                                                                                                      
+
 
 === Q1 sin indice: plan antes ===
 
@@ -32,29 +50,35 @@ Explicado.
 
 PLAN_TABLE_OUTPUT                                                                                                                                                                                       
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Plan hash value: 3566217236
+Plan hash value: 783100909
  
-----------------------------------------------------------
-| Id  | Operation         | Name    | Rows  | Cost (%CPU)|
-----------------------------------------------------------
-|   0 | SELECT STATEMENT  |         |     3 |    68   (0)|
-|*  1 |  TABLE ACCESS FULL| RESERVA |     3 |    68   (0)|
-----------------------------------------------------------
+---------------------------------------------------------------------------------
+| Id  | Operation                     | Name               | Rows  | Cost (%CPU)|
+---------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |                    |     1 |    69   (0)|
+|   1 |  SORT AGGREGATE               |                    |     1 |            |
+|   2 |   NESTED LOOPS                |                    |     1 |    69   (0)|
+|   3 |    NESTED LOOPS               |                    |     1 |    69   (0)|
+|*  4 |     TABLE ACCESS FULL         | RESERVA_HABITACION |     1 |    68   (0)|
+|*  5 |     INDEX UNIQUE SCAN         | RESERVA_PK         |     1 |     0   (0)|
+|*  6 |    TABLE ACCESS BY INDEX ROWID| RESERVA            |     1 |     1   (0)|
+---------------------------------------------------------------------------------
  
 Predicate Information (identified by operation id):
 ---------------------------------------------------
  
-   1 - filter("R"."ID_CLIENTE"=1 AND "R"."CHECKIN">=TO_DATE(' 
-              2025-01-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss') AND 
-              "R"."CHECKIN"<TO_DATE(' 2026-01-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss') 
-              AND "CHECKOUT">TO_DATE(' 2025-01-01 00:00:00', 'syyyy-mm-dd 
-              hh24:mi:ss'))
+   4 - filter("RH"."ID_HABITACION"=TO_NUMBER(:B_HAB) AND 
+              "RH"."FECHA_CHECKIN_LINEA"<TO_DATE(:B_OUT,'YYYY-MM-DD') AND 
+              "RH"."FECHA_CHECKOUT_LINEA">TO_DATE(:B_IN,'YYYY-MM-DD'))
+   5 - access("R"."ID_RESERVA"="RH"."ID_RESERVA")
+   6 - filter("R"."ESTADO"='completada' OR "R"."ESTADO"='confirmada' OR 
+              "R"."ESTADO"='pendiente')
 
-17 filas seleccionadas. 
+23 filas seleccionadas. 
 
 === Q1 con indice compuesto ===
 
-Index IDX_RESERVA_CLIENTE_CHECKIN creado.
+Index IDX_RH_HAB_FECHAS creado.
 
 
 Explicado.
@@ -62,31 +86,39 @@ Explicado.
 
 PLAN_TABLE_OUTPUT                                                                                                                                                                                       
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Plan hash value: 1619981181
+Plan hash value: 388441019
  
-------------------------------------------------------------------------------------------------
-| Id  | Operation                           | Name                        | Rows  | Cost (%CPU)|
-------------------------------------------------------------------------------------------------
-|   0 | SELECT STATEMENT                    |                             |     3 |     5   (0)|
-|*  1 |  TABLE ACCESS BY INDEX ROWID BATCHED| RESERVA                     |     3 |     5   (0)|
-|*  2 |   INDEX RANGE SCAN                  | IDX_RESERVA_CLIENTE_CHECKIN |     3 |     2   (0)|
-------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+| Id  | Operation                              | Name               | Rows  | Cost (%CPU)|
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                       |                    |     1 |     4   (0)|
+|   1 |  SORT AGGREGATE                        |                    |     1 |            |
+|   2 |   NESTED LOOPS                         |                    |     1 |     4   (0)|
+|   3 |    NESTED LOOPS                        |                    |     1 |     4   (0)|
+|   4 |     TABLE ACCESS BY INDEX ROWID BATCHED| RESERVA_HABITACION |     1 |     3   (0)|
+|*  5 |      INDEX RANGE SCAN                  | IDX_RH_HAB_FECHAS  |     1 |     2   (0)|
+|*  6 |     INDEX UNIQUE SCAN                  | RESERVA_PK         |     1 |     0   (0)|
+|*  7 |    TABLE ACCESS BY INDEX ROWID         | RESERVA            |     1 |     1   (0)|
+------------------------------------------------------------------------------------------
  
 Predicate Information (identified by operation id):
 ---------------------------------------------------
  
-   1 - filter("CHECKOUT">TO_DATE(' 2025-01-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss'))
-   2 - access("R"."ID_CLIENTE"=1 AND "R"."CHECKIN">=TO_DATE(' 2025-01-01 00:00:00', 
-              'syyyy-mm-dd hh24:mi:ss') AND "R"."CHECKIN"<TO_DATE(' 2026-01-01 00:00:00', 
-              'syyyy-mm-dd hh24:mi:ss'))
+   5 - access("RH"."ID_HABITACION"=TO_NUMBER(:B_HAB) AND 
+              "RH"."FECHA_CHECKOUT_LINEA">TO_DATE(:B_IN,'YYYY-MM-DD') AND 
+              "RH"."FECHA_CHECKIN_LINEA"<TO_DATE(:B_OUT,'YYYY-MM-DD'))
+       filter("RH"."FECHA_CHECKOUT_LINEA">TO_DATE(:B_IN,'YYYY-MM-DD'))
+   6 - access("R"."ID_RESERVA"="RH"."ID_RESERVA")
+   7 - filter("R"."ESTADO"='completada' OR "R"."ESTADO"='confirmada' OR 
+              "R"."ESTADO"='pendiente')
 
-17 filas seleccionadas. 
+25 filas seleccionadas. 
 
-=== Q1 control: la consulta devuelve las mismas filas ===
+=== Q1 control: mismo resultado con y sin indice ===
 
-FILAS_DEVUELTAS
----------------
-              2
+   CHOQUES
+----------
+         1
 
 Procedimiento PL/SQL terminado correctamente.
 
@@ -219,30 +251,6 @@ Predicate Information (identified by operation id):
 
 20 filas seleccionadas. 
 
-=== Q3 control: filas devueltas (mismas con y sin indice) ===
-
-ID_RESERVA_SERVICIO   CANTIDAD PRECIO_UNITARIO NOMBRE                                                      
-------------------- ---------- --------------- ------------------------------------------------------------
-              22270          2           47300 Tour cafetero                                               
-              35527          2           47300 Tour cafetero                                               
-                845          1           47300 Tour cafetero                                               
-               8368          2           47300 Tour cafetero                                               
-              31333          1           47300 Tour cafetero                                               
-              38244          2           47300 Tour cafetero                                               
-              28999          1           47300 Tour cafetero                                               
-              22493          1           47300 Tour cafetero                                               
-              28819          2           59500 Cena tipica                                                 
-              38654          2           59500 Cena tipica                                                 
-              38482          2           59500 Cena tipica                                                 
-              23539          1           59500 Cena tipica                                                 
-              22086          2           59500 Cena tipica                                                 
-              15994          2           59500 Cena tipica                                                 
-              15180          1           59500 Cena tipica                                                 
-              10129          1           59500 Cena tipica                                                 
-               5804          1           59500 Cena tipica                                                 
-
-17 filas seleccionadas. 
-
 === Q4 sin indice: plan antes ===
 
 Explicado.
@@ -307,7 +315,7 @@ cancelada          2829      11,32
 pendiente          1656       6,62
 confirmada         1431       5,72
 
-=== 5.1: indices finales (los tres utiles + idx_reserva_estado de Q4) ===
+=== 5.1: indices finales (los utiles + idx_reserva_estado de Q4) ===
 
 TABLE_NAME           INDEX_NAME                       INDEX_TYPE               UNIQUENESS
 -------------------- -------------------------------- ------------------------ ----------
@@ -315,20 +323,22 @@ CLIENTE              CLIENTE_CEDULA_UQ                NORMAL                   U
 CLIENTE              CLIENTE_CORREO_UQ                NORMAL                   UNIQUE    
 CLIENTE              CLIENTE_PK                       NORMAL                   UNIQUE    
 CLIENTE              FX_CLIENTE_CORREO_LOWER          FUNCTION-BASED NORMAL    NONUNIQUE 
-RESERVA              IDX_RESERVA_CLIENTE_CHECKIN      NORMAL                   NONUNIQUE 
 RESERVA              IDX_RESERVA_ESTADO               NORMAL                   NONUNIQUE 
 RESERVA              RESERVA_PK                       NORMAL                   UNIQUE    
+RESERVA_HABITACION   IDX_RH_HAB_FECHAS                NORMAL                   NONUNIQUE 
+RESERVA_HABITACION   RESERVA_HABITACION_PK            NORMAL                   UNIQUE    
+RESERVA_HABITACION   RESERVA_HABITACION_UQ            NORMAL                   UNIQUE    
 RESERVA_SERVICIO     IDX_RES_SERV_RESERVA             NORMAL                   NONUNIQUE 
 RESERVA_SERVICIO     RESERVA_SERVICIO_PK              NORMAL                   UNIQUE    
 SERVICIO             SERVICIO_PK                      NORMAL                   UNIQUE    
 
-10 filas seleccionadas. 
+12 filas seleccionadas. 
 
 === 5.2: se borra el indice de Q4, que no mejoro el plan ===
 
 Index IDX_RESERVA_ESTADO borrado.
 
-=== 5.3: quedan solo los tres indices que si sirven ===
+=== 5.3: quedan solo los indices que si sirven ===
 
 TABLE_NAME           INDEX_NAME                       INDEX_TYPE               UNIQUENESS
 -------------------- -------------------------------- ------------------------ ----------
@@ -336,11 +346,13 @@ CLIENTE              CLIENTE_CEDULA_UQ                NORMAL                   U
 CLIENTE              CLIENTE_CORREO_UQ                NORMAL                   UNIQUE    
 CLIENTE              CLIENTE_PK                       NORMAL                   UNIQUE    
 CLIENTE              FX_CLIENTE_CORREO_LOWER          FUNCTION-BASED NORMAL    NONUNIQUE 
-RESERVA              IDX_RESERVA_CLIENTE_CHECKIN      NORMAL                   NONUNIQUE 
 RESERVA              RESERVA_PK                       NORMAL                   UNIQUE    
+RESERVA_HABITACION   IDX_RH_HAB_FECHAS                NORMAL                   NONUNIQUE 
+RESERVA_HABITACION   RESERVA_HABITACION_PK            NORMAL                   UNIQUE    
+RESERVA_HABITACION   RESERVA_HABITACION_UQ            NORMAL                   UNIQUE    
 RESERVA_SERVICIO     IDX_RES_SERV_RESERVA             NORMAL                   NONUNIQUE 
 RESERVA_SERVICIO     RESERVA_SERVICIO_PK              NORMAL                   UNIQUE    
 SERVICIO             SERVICIO_PK                      NORMAL                   UNIQUE    
 
-9 filas seleccionadas. 
+11 filas seleccionadas. 
 

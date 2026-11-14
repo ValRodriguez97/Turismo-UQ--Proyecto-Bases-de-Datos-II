@@ -205,22 +205,22 @@ SQL> DECLARE
  26    END IF;
  27  END;
  28  /
-Reserva 25018 creada. Valor estadia: 470000
-Reserva creada con el paquete: 25018 (habitacion 72, entrada en +39 dias)
+Reserva 25013 creada. Valor estadia: 738000
+Reserva creada con el paquete: 25013 (habitacion 72, entrada en +39 dias)
 
 Procedimiento PL/SQL terminado correctamente.
 SQL> PRINT nueva_reserva
 
 NUEVA_RESERVA
 -------------
-        25018
+        25013
 
 SQL> SELECT id_reserva, estado, checkin, checkout, numero_habitacion
   2  FROM proyecto.v_recepcion_reservas WHERE id_reserva = :nueva_reserva;
 
 ID_RESERVA ESTADO       CHECKIN  CHECKOUT NUMERO_HAB
 ---------- ------------ -------- -------- ----------
-     25018 pendiente    22/12/26 24/12/26 101       
+     25013 pendiente    23/12/26 25/12/26 101       
 
 SQL> ROLLBACK;
 Rollback terminado.
@@ -312,8 +312,8 @@ SQL> SELECT id_tarifa, precio_noche FROM proyecto.v_admin_tarifas WHERE ROWNUM <
 
  ID_TARIFA PRECIO_NOCHE
 ---------- ------------
-      6427       711000
-      6428       509000
+      4033       777000
+      4034       526000
 
 SQL> UPDATE proyecto.v_admin_tarifas SET precio_noche = precio_noche + 5000
   2  WHERE id_tarifa = (SELECT MIN(id_tarifa) FROM proyecto.v_admin_tarifas);
@@ -325,7 +325,7 @@ SQL> SELECT id_tarifa, precio_noche AS precio_nuevo FROM proyecto.v_admin_tarifa
 
  ID_TARIFA PRECIO_NUEVO
 ---------- ------------
-      6427       716000
+      4033       782000
 
 SQL> ROLLBACK;
 Rollback terminado.
@@ -444,11 +444,11 @@ SQL> SELECT * FROM (SELECT alojamiento, municipio, ingreso_estadias
 
 ALOJAMIENTO                                                                      MUNICIPIO                                INGRESO_ESTADIAS
 -------------------------------------------------------------------------------- ---------------------------------------- ----------------
-El Parador 27                                                                    Montenegro                                     1592005000
-Los Pinos 33                                                                     La Tebaida                                     1518727000
-El Lago 2                                                                        Circasia                                       1390730000
+El Parador 27                                                                    Montenegro                                     1664671000
+Los Pinos 33                                                                     La Tebaida                                     1591996000
+El Lago 2                                                                        Circasia                                       1468643000
 El Descanso 57                                                                   Genova                                         1383161000
-Villa Lucia 12                                                                   Quimbaya                                       1342919000
+El Mirador 21                                                                    Salento                                        1364565000
 
 SQL> 
 SQL> PROMPT === 3c: calificaciones (mejores 5) ===
@@ -460,11 +460,11 @@ SQL> SELECT * FROM (SELECT alojamiento, resenas, promedio
 
 ALOJAMIENTO                                                                         RESENAS   PROMEDIO
 -------------------------------------------------------------------------------- ---------- ----------
-Las Flores 36                                                                            36       4,36
-El Portal 43                                                                             60       4,17
-La Victoria 13                                                                           49       4,12
-Don Pedro 58                                                                             36       4,08
-Santa Fe 44                                                                              65       4,03
+El Carmen 54                                                                             47       4,36
+La Victoria 13                                                                           50       4,16
+El Portal 43                                                                             72       4,13
+Los Andes 42                                                                             61       4,13
+Los Andes 34                                                                             51       4,12
 
 SQL> 
 SQL> PROMPT === 3d: sin acceso a tablas ni a datos de clientes -> ORA-00942 ===

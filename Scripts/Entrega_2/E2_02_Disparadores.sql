@@ -1,6 +1,11 @@
 -- =================================================================================
 -- TurismoUQ - Entrega 2 - Entregable 2
 -- DISPARADORES
+--
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
+--
 --   PARTE 1) De SENTENCIA: auditoria de cambios de precio sobre TARIFA
 --   PARTE 2) De FILA: no solape de reservas en una misma habitacion
 --   PARTE 3) De FILA: reglas de negocio del documento que ninguna restriccion puede validar
@@ -20,10 +25,6 @@
 --  - 20015 resena no valida
 --  - 20016 no existe el administrador
 --  - 20017 temporadas solapadas
---
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
 --
 -- Orden de ejecucion: DESPUES de E2_01_PaqueteTurismouq.sql 
 -- =================================================================================

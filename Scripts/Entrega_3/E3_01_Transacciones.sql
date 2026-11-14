@@ -20,9 +20,9 @@
 --  - 20032 metodo de pago invalido
 --  - 20033 la habitacion esta siendo reservada por otra sesion (espera agotada)
 --
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- Orden de ejecucion: DESPUES de los scripts de la Entrega 2 (usa pkg_turismouq).
 -- Este script crea sp_crear_reserva_segura, que tambien usa el experimento de

@@ -2,6 +2,10 @@
 -- TurismoUQ - Entrega 3 - Entregable 2
 -- CONCURRENCIA: GUION DE LA SESION B
 --
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
+-- 
 -- NO se ejecuta con F5. Se ejecuta UN paso a la vez con Ctrl + Enter, en una hoja
 -- NO compartida (Ctrl + Shift + N), alternando con E3_02_SesionA.sql en este orden:
 --

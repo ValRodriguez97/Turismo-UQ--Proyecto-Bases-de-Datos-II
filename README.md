@@ -4,7 +4,7 @@
 
 | # | Script | Conexion |
 |---|--------|----------|
-| 0 | E2_00_system.sql | SYSTEM (una sola vez) |
+| 0 | E0_00_system.sql | SYSTEM (una sola vez) |
 | 1 | ScriptDDL-TurismoUQ.sql | usuario del proyecto |
 | 2 | Carga_TurismoUQ.sql | usuario del proyecto |
 | 3 | Consultas_Analisis_TurismoUQ.sql | usuario del proyecto |
@@ -16,7 +16,10 @@
 | 9 | E3_02_SesionA.sql | usuario del proyecto |
 | 10 | E3_02_SesionB.sql | usuario del proyecto |
 | 11 | E3_03_Indices.sql | usuario del proyecto |
-| 12 | E3_04_Roles_Usuarios_Grant_Vistas.sql | conectado como SYSTEM | 
+| 12 | E3_04a_Roles_Perfil_Usuario | conectado como SYSTEM | 
+| 13 | E3_04b_Vistas_Grants | usuario del Proyecto |
+| 14 | E3_04c_Pruebas_Seguridad | |
+| 15 | E3_04d_Prueba_Perfil | |
 
 
 Salida de las pruebas: 

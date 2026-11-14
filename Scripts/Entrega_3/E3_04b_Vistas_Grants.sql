@@ -2,9 +2,9 @@
 -- TurismoUQ - Entrega 3 - Entregable 4 (seguridad) - ARCHIVO B de 4
 -- E3_04b: VISTAS POR ROL Y PRIVILEGIOS (GRANT)
 --
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- SE EJECUTA CONECTADO COMO PROYECTO (dueño de las tablas, el paquete y las vistas),
 -- DESPUES de E3_04a (los roles ya deben existir). Correrlo completo con F5.

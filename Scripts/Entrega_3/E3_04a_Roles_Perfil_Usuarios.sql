@@ -2,9 +2,9 @@
 -- TurismoUQ - Entrega 3 - Entregable 4 (seguridad) - ARCHIVO A de 4
 -- E3_04a: PERFIL, ROLES Y USUARIOS DE ORACLE
 --
--- Valentina Gonzalez Diaz
--- Raquel Lopez Aristizabal
--- Valentina Rodriguez Castro
+-- Raquel Lopez Aristizabal - Código: 1091884575
+-- Valentina Gonzalez Diaz - Código: 1094898396
+-- Valentina Rodríguez Castro - Código: 1016833647
 --
 -- ORDEN DE EJECUCION DEL ENTREGABLE 4:
 --   1) E3_04a_Roles_Perfil_Usuarios.sql -> conectado como SYSTEM   (este archivo)
