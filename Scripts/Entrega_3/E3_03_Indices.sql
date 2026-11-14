@@ -130,6 +130,7 @@ PROMPT === Q1 con indice compuesto ===
 CREATE INDEX idx_rh_hab_fechas
       ON reserva_habitacion (id_habitacion, fecha_checkin_linea, fecha_checkout_linea);
 
+--- Plan despues
 EXPLAIN PLAN FOR
 SELECT COUNT(*)
 FROM reserva_habitacion rh
