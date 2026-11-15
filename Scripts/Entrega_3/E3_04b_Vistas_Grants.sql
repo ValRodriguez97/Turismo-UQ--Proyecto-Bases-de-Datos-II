@@ -222,6 +222,22 @@ GRANT SELECT ON v_recepcion_clientes TO rol_recepcion;
 GRANT UPDATE (correo, telefono) ON v_recepcion_clientes TO rol_recepcion;
 GRANT EXECUTE ON pkg_turismouq TO rol_recepcion;
 
+-- Procedimiento atomico reserva + pago (E3_01_Transacciones.sql): recepcion lo ejecuta
+-- sin tocar tablas. Se otorga solo si ya existe (correr E3_01 antes que este archivo).
+DECLARE
+  v_n NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_n FROM user_objects
+   WHERE object_name = 'SP_RESERVAR_Y_PAGAR' AND object_type = 'PROCEDURE';
+  IF v_n = 1 THEN
+    EXECUTE IMMEDIATE 'GRANT EXECUTE ON sp_reservar_y_pagar TO rol_recepcion';
+    DBMS_OUTPUT.PUT_LINE('EXECUTE sobre sp_reservar_y_pagar otorgado a ROL_RECEPCION.');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('AVISO: sp_reservar_y_pagar no existe; correr E3_01 antes y repetir este GRANT.');
+  END IF;
+END;
+/
+
 -- =================================================================================
 -- 7. GRANT: ROL_ADMIN_ALOJAMIENTO
 -- =================================================================================
