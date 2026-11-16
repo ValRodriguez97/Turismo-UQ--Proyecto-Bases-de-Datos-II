@@ -102,14 +102,14 @@ SQL> SELECT COUNT(*) AS habitaciones FROM proyecto.v_recepcion_habitaciones;
 
 HABITACIONES
 ------------
-           7
+           6
 
 SQL> SELECT COUNT(*) AS reservas_en_vista, COUNT(DISTINCT id_reserva) AS reservas_distintas
   2  FROM proyecto.v_recepcion_reservas;
 
 RESERVAS_EN_VISTA RESERVAS_DISTINTAS
 ----------------- ------------------
-              297                249
+              259                220
 
 SQL> 
 SQL> PROMPT === 1d: estado de las habitaciones hoy ===
@@ -119,8 +119,8 @@ SQL> SELECT estado_hoy, COUNT(*) AS habitaciones
 
 ESTADO_HOY HABITACIONES
 ---------- ------------
+LIBRE                 5
 OCUPADA               1
-LIBRE                 6
 
 SQL> 
 SQL> PROMPT === 1e: no puede modificar reservas ni pagos -> ORA-41900 / ORA-01031 ===
@@ -205,22 +205,22 @@ SQL> DECLARE
  26    END IF;
  27  END;
  28  /
-Reserva 25013 creada. Valor estadia: 738000
-Reserva creada con el paquete: 25013 (habitacion 72, entrada en +39 dias)
+Reserva 25026 creada. Valor estadia: 472000
+Reserva creada con el paquete: 25026 (habitacion 71, entrada en +30 dias)
 
 Procedimiento PL/SQL terminado correctamente.
 SQL> PRINT nueva_reserva
 
 NUEVA_RESERVA
 -------------
-        25013
+        25026
 
 SQL> SELECT id_reserva, estado, checkin, checkout, numero_habitacion
   2  FROM proyecto.v_recepcion_reservas WHERE id_reserva = :nueva_reserva;
 
 ID_RESERVA ESTADO       CHECKIN  CHECKOUT NUMERO_HAB
 ---------- ------------ -------- -------- ----------
-     25013 pendiente    23/12/26 25/12/26 101       
+     25026 pendiente    16/12/26 18/12/26 101       
 
 SQL> ROLLBACK;
 Rollback terminado.
@@ -312,8 +312,8 @@ SQL> SELECT id_tarifa, precio_noche FROM proyecto.v_admin_tarifas WHERE ROWNUM <
 
  ID_TARIFA PRECIO_NOCHE
 ---------- ------------
-      4033       777000
-      4034       526000
+     11173       167000
+     11174       119000
 
 SQL> UPDATE proyecto.v_admin_tarifas SET precio_noche = precio_noche + 5000
   2  WHERE id_tarifa = (SELECT MIN(id_tarifa) FROM proyecto.v_admin_tarifas);
@@ -325,7 +325,7 @@ SQL> SELECT id_tarifa, precio_noche AS precio_nuevo FROM proyecto.v_admin_tarifa
 
  ID_TARIFA PRECIO_NUEVO
 ---------- ------------
-      4033       782000
+     11173       172000
 
 SQL> ROLLBACK;
 Rollback terminado.
@@ -444,11 +444,11 @@ SQL> SELECT * FROM (SELECT alojamiento, municipio, ingreso_estadias
 
 ALOJAMIENTO                                                                      MUNICIPIO                                INGRESO_ESTADIAS
 -------------------------------------------------------------------------------- ---------------------------------------- ----------------
-El Parador 27                                                                    Montenegro                                     1664671000
-Los Pinos 33                                                                     La Tebaida                                     1591996000
-El Lago 2                                                                        Circasia                                       1468643000
-El Descanso 57                                                                   Genova                                         1383161000
-El Mirador 21                                                                    Salento                                        1364565000
+Casa Blanca 16                                                                   Montenegro                                     1746764000
+El Triunfo 49                                                                    Quimbaya                                       1712590000
+Villa Lucia 12                                                                   Quimbaya                                       1679659000
+Los Almendros 29                                                                 Salento                                        1633780000
+Las Palmas 45                                                                    Quimbaya                                       1517126000
 
 SQL> 
 SQL> PROMPT === 3c: calificaciones (mejores 5) ===
@@ -460,11 +460,11 @@ SQL> SELECT * FROM (SELECT alojamiento, resenas, promedio
 
 ALOJAMIENTO                                                                         RESENAS   PROMEDIO
 -------------------------------------------------------------------------------- ---------- ----------
-El Carmen 54                                                                             47       4,36
-La Victoria 13                                                                           50       4,16
-El Portal 43                                                                             72       4,13
-Los Andes 42                                                                             61       4,13
-Los Andes 34                                                                             51       4,12
+Mirador del Valle 59                                                                     38       4,21
+Villa Hermosa 18                                                                         35        4,2
+El Diamante 32                                                                           61       4,16
+Santa Fe 55                                                                              60        4,1
+El Faro 7                                                                                74       4,07
 
 SQL> 
 SQL> PROMPT === 3d: sin acceso a tablas ni a datos de clientes -> ORA-00942 ===
@@ -572,7 +572,7 @@ SQL> SELECT COUNT(*) AS pagos FROM proyecto.pago;
 
      PAGOS
 ----------
-     33732
+     33574
 
 SQL> 
 SQL> PROMPT === 4c: no puede modificar -> ORA-41900 / ORA-01031 (las 3) ===

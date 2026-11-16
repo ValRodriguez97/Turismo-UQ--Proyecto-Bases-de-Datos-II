@@ -39,8 +39,8 @@ HABITACION_CONSULTADA DESDE
 --------------------- --------------------------------------------------------------------------------------------------------------------------------
 HASTA                                                                                                                           
 --------------------------------------------------------------------------------------------------------------------------------
-                  640 2026-12-21                                                                                                                       
-2026-12-27                                                                                                                      
+                  149 2026-12-24                                                                                                                       
+2026-12-30                                                                                                                      
 
 
 === Q1 sin indice: plan antes ===
@@ -187,7 +187,7 @@ Procedimiento PL/SQL terminado correctamente.
 
 RESERVA_CON_SERVICIOS
 ---------------------
-                 9475
+                24230
 
 === Q3 sin indice: plan antes ===
 
@@ -263,8 +263,8 @@ Plan hash value: 3566217236
 ----------------------------------------------------------
 | Id  | Operation         | Name    | Rows  | Cost (%CPU)|
 ----------------------------------------------------------
-|   0 | SELECT STATEMENT  |         | 19084 |    68   (0)|
-|*  1 |  TABLE ACCESS FULL| RESERVA | 19084 |    68   (0)|
+|   0 | SELECT STATEMENT  |         | 18898 |    68   (0)|
+|*  1 |  TABLE ACCESS FULL| RESERVA | 18898 |    68   (0)|
 ----------------------------------------------------------
  
 Predicate Information (identified by operation id):
@@ -289,8 +289,8 @@ Plan hash value: 3566217236
 ----------------------------------------------------------
 | Id  | Operation         | Name    | Rows  | Cost (%CPU)|
 ----------------------------------------------------------
-|   0 | SELECT STATEMENT  |         | 19084 |    68   (0)|
-|*  1 |  TABLE ACCESS FULL| RESERVA | 19084 |    68   (0)|
+|   0 | SELECT STATEMENT  |         | 18898 |    68   (0)|
+|*  1 |  TABLE ACCESS FULL| RESERVA | 18898 |    68   (0)|
 ----------------------------------------------------------
  
 Predicate Information (identified by operation id):
@@ -304,16 +304,16 @@ Predicate Information (identified by operation id):
 
 COMPLETADAS
 -----------
-      19084
+      18898
 
 === Q4: por que no ayuda - cardinalidad real de estado ===
 
 ESTADO            FILAS        PCT
 ------------ ---------- ----------
-completada        19084      76,34
-cancelada          2829      11,32
-pendiente          1656       6,62
-confirmada         1431       5,72
+completada        18898      75,59
+cancelada          2889      11,56
+pendiente          1769       7,08
+confirmada         1444       5,78
 
 === 5.1: indices finales (los utiles + idx_reserva_estado de Q4) ===
 

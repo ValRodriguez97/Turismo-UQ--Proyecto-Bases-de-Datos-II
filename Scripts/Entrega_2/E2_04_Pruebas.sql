@@ -85,6 +85,22 @@ EXCEPTION
 END;
 /
 
+-- 1f) Fechas invalidas (check-out anterior al check-in): debe dar ORA-20001
+DECLARE
+  v_x NUMBER;
+BEGIN
+  v_x := pkg_turismouq.fn_valor_estadia(1, DATE '2026-08-13', DATE '2026-08-10');
+  DBMS_OUTPUT.PUT_LINE('FALLO: debio rechazar el check-out anterior al check-in');
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -20001 THEN
+      DBMS_OUTPUT.PUT_LINE('OK (esperado): ' || SQLERRM);
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
+
 -- ===== PRUEBA 2: sp_crear_reserva =====
 -- 2a) Caso exitoso + intento de solape inmediato
 DECLARE
