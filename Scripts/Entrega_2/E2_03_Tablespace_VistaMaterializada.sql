@@ -18,9 +18,8 @@
 
 SET DEFINE OFF
 SET SERVEROUTPUT ON
-WHENEVER SQLERROR CONTINUE
-
 WHENEVER SQLERROR EXIT FAILURE ROLLBACK
+
 DECLARE
   v_ok NUMBER;
 BEGIN
@@ -334,3 +333,11 @@ END;
 
 -- D.3 Refresco manual (el mismo que hace el job), para usar despues de una carga masiva:
 -- EXEC DBMS_MVIEW.REFRESH('MV_OCUPACION_MENSUAL', 'C', atomic_refresh => FALSE);
+
+SELECT name, type, line, text FROM user_errors ORDER BY name, sequence;
+DECLARE v NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v FROM user_objects WHERE status = 'INVALID';
+  IF v > 0 THEN RAISE_APPLICATION_ERROR(-20999, v || ' objeto(s) INVALIDOS'); END IF;
+END;
+/

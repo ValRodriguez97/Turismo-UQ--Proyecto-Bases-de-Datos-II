@@ -10,7 +10,7 @@
 --
 -- =================================================================================
 SET DEFINE OFF
-WHENEVER SQLERROR CONTINUE
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
 SET SERVEROUTPUT ON SIZE UNLIMITED
 SET LINESIZE 220
 SET VERIFY OFF
@@ -28,6 +28,21 @@ SELECT pkg_turismouq.fn_valor_estadia(1, DATE '2026-12-14', DATE '2026-12-18') A
        2 * (SELECT precio_noche FROM tarifa WHERE id_habitacion = 1 AND id_temporada = 20)
      + 2 * (SELECT precio_noche FROM tarifa WHERE id_habitacion = 1 AND id_temporada = 21) AS manual
 FROM dual;
+
+-- 1b2) CRUZA EL CAMBIO DE AÑO: 30 dic 2025 al 3 ene 2026
+--      2 noches de la temporada 14 (alta 2025) + 2 noches de la temporada 15 (alta 2026)
+DECLARE
+  v_func   NUMBER;
+  v_manual NUMBER;
+BEGIN
+  v_func := pkg_turismouq.fn_valor_estadia(1, DATE '2025-12-30', DATE '2026-01-03');
+  SELECT 2 * (SELECT precio_noche FROM tarifa WHERE id_habitacion = 1 AND id_temporada = 14)
+       + 2 * (SELECT precio_noche FROM tarifa WHERE id_habitacion = 1 AND id_temporada = 15)
+    INTO v_manual FROM dual;
+  DBMS_OUTPUT.PUT_LINE('1b2 cambio de anio: funcion=' || v_func || ' manual=' || v_manual
+    || '  ' || CASE WHEN v_func = v_manual THEN 'OK' ELSE 'FALLA' END);
+END;
+/
 
 -- 1c) Sin temporada definida (2027): debe dar ORA-20006
 DECLARE
@@ -272,7 +287,71 @@ ROLLBACK;
 PROMPT === A4: tras el ROLLBACK la auditoria de prueba desaparece (debe dar 0) ===
 SELECT COUNT(*) AS filas_auditoria_tras_rollback FROM auditoria_tarifa WHERE id_tarifa IN (1,2,3);
 
+PROMPT === A5: cambio de precio con el disparador apagado: el procedimiento lo detecta ===
+DECLARE
+  v_precio tarifa.precio_noche%TYPE;
+  v_max    NUMBER;
+  v_aud    NUMBER;
+  v_dif    NUMBER;
+  v_det    NUMBER;
+  v_estado VARCHAR2(10);
+  PROCEDURE reporte(p_caso VARCHAR2, p_ok BOOLEAN, p_detalle VARCHAR2) IS
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE(RPAD(p_caso, 62) || CASE WHEN p_ok THEN 'OK' ELSE 'FALLA' END
+                         || '  ' || p_detalle);
+  END;
+BEGIN
+  SELECT precio_noche INTO v_precio FROM tarifa WHERE id_tarifa = 1;
+  SELECT NVL(MAX(id_auditoria), 0) INTO v_max FROM auditoria_tarifa;
 
+  -- 1) Apagar el disparador y cambiar el precio
+  EXECUTE IMMEDIATE 'ALTER TRIGGER trg_auditoria_tarifa DISABLE';
+  UPDATE tarifa SET precio_noche = v_precio + 10000 WHERE id_tarifa = 1;
+  COMMIT;
+
+  -- 2) Sin disparador no hay auditoria, y la copia quedo desincronizada
+  SELECT COUNT(*) INTO v_aud FROM auditoria_tarifa WHERE id_auditoria > v_max;
+  SELECT COUNT(*) INTO v_dif
+    FROM tarifa t JOIN tarifa_precio_previo p ON p.id_tarifa = t.id_tarifa
+   WHERE t.precio_noche <> p.precio_noche;
+  reporte('A5.1 sin disparador: no audita y la copia se desincroniza',
+          v_aud = 0 AND v_dif = 1,
+          'auditoria=' || v_aud || ' (esperado 0), diferencias=' || v_dif || ' (esperado 1)');
+
+  -- 3) El procedimiento lo detecta y lo registra
+  sp_verificar_sincronia_tarifa;
+  SELECT COUNT(*) INTO v_det FROM auditoria_tarifa
+   WHERE id_auditoria > v_max AND motivo LIKE 'DETECTADO%';
+  SELECT COUNT(*) INTO v_dif
+    FROM tarifa t JOIN tarifa_precio_previo p ON p.id_tarifa = t.id_tarifa
+   WHERE t.precio_noche <> p.precio_noche;
+  reporte('A5.2 el procedimiento registra el cambio y resincroniza',
+          v_det = 1 AND v_dif = 0,
+          'detectados=' || v_det || ' (esperado 1), diferencias=' || v_dif || ' (esperado 0)');
+
+  -- 4) Volver a encender el disparador y dejar los datos como estaban
+  EXECUTE IMMEDIATE 'ALTER TRIGGER trg_auditoria_tarifa ENABLE';
+  UPDATE tarifa SET precio_noche = v_precio WHERE id_tarifa = 1;
+  DELETE FROM auditoria_tarifa WHERE id_auditoria > v_max;
+  COMMIT;
+
+  SELECT status INTO v_estado FROM user_triggers WHERE trigger_name = 'TRG_AUDITORIA_TARIFA';
+  SELECT COUNT(*) INTO v_dif
+    FROM tarifa t JOIN tarifa_precio_previo p ON p.id_tarifa = t.id_tarifa
+   WHERE t.precio_noche <> p.precio_noche;
+  reporte('A5.3 disparador encendido y datos restaurados',
+          v_estado = 'ENABLED' AND v_dif = 0,
+          'estado=' || v_estado || ', diferencias=' || v_dif);
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Si algo falla, el disparador nunca queda apagado
+    BEGIN
+      EXECUTE IMMEDIATE 'ALTER TRIGGER trg_auditoria_tarifa ENABLE';
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+    RAISE;
+END;
+/
 -- =================================================================================
 -- PRUEBA B - NO SOLAPE DE RESERVAS (disparador de fila)
 -- B1 usa un caso REAL: una linea que ya existe en los datos de una reserva
@@ -1074,5 +1153,19 @@ EXCEPTION
     END IF;
 END;
 /
+
+
+-- PRUEBA M - RN1 reembolsos
+-- Frontera de la regla: 6 dias reembolsa, 5 dias o menos no
+SELECT r.id_reserva, r.checkin,
+       SUM(p.monto)                                  AS pagado,
+       fn_reembolso(r.id_reserva, r.checkin - 6)     AS con_6_dias,
+       fn_reembolso(r.id_reserva, r.checkin - 5)     AS con_5_dias,
+       fn_reembolso(r.id_reserva, r.checkin - 1)     AS con_1_dia
+FROM reserva r JOIN pago p ON p.id_reserva = r.id_reserva
+WHERE p.estado_pago = 'exitoso' AND r.estado = 'cancelada'
+GROUP BY r.id_reserva, r.checkin
+FETCH FIRST 3 ROWS ONLY;
+
 
 SPOOL OFF

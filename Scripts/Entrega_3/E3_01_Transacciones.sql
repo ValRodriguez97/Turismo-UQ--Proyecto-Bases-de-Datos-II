@@ -31,7 +31,7 @@
 -- Ejecutar con F5. La evidencia queda en evidencia_entrega3_transacciones.txt (SPOOL).
 -- =================================================================================
 SET DEFINE OFF
-WHENEVER SQLERROR CONTINUE
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
 SET SERVEROUTPUT ON SIZE UNLIMITED
 SET LINESIZE 200
 COLUMN estado FORMAT A12
@@ -574,5 +574,13 @@ SELECT (SELECT COUNT(*) FROM reserva) AS reservas,
        (SELECT COUNT(*) FROM reserva_habitacion) AS lineas,
        (SELECT COUNT(*) FROM pago) AS pagos
 FROM dual;
+
+SELECT name, type, line, text FROM user_errors ORDER BY name, sequence;
+DECLARE v NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v FROM user_objects WHERE status = 'INVALID';
+  IF v > 0 THEN RAISE_APPLICATION_ERROR(-20999, v || ' objeto(s) INVALIDOS'); END IF;
+END;
+/
 
 SPOOL OFF

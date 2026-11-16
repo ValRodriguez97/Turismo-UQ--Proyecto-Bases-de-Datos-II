@@ -7,6 +7,7 @@
 -- Valentina Rodríguez Castro - Código: 1016833647
 --
 --   PARTE 1) De SENTENCIA: auditoria de cambios de precio sobre TARIFA
+--   PARTE 1B) Deteccion de desincronia de la tabla espejo (procedimiento + job)
 --   PARTE 2) De FILA: no solape de reservas en una misma habitacion
 --   PARTE 3) De FILA: reglas de negocio del documento que ninguna restriccion puede validar
 --              regla 2 - resenas solo de estadias completadas
@@ -29,7 +30,7 @@
 -- Orden de ejecucion: DESPUES de E2_01_PaqueteTurismouq.sql 
 -- =================================================================================
 SET DEFINE OFF
-WHENEVER SQLERROR CONTINUE
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
 
 -- =================================================================================
 -- PARTE 1 - AUDITORIA DE TARIFA (disparador a nivel de SENTENCIA)
@@ -133,6 +134,50 @@ BEGIN
 END;
 /
 
+-- =================================================================================
+-- PARTE 1B - DETECCION DE DESINCRONIA DE LA TABLA ESPEJO
+-- =================================================================================}
+-- Si alguien cambia precios con el disparador deshabilitado, TARIFA_PRECIO_PREVIO queda
+-- desactualizada y el cambio no se audita. Este procedimiento compara ambas tablas,
+-- registra las diferencias en AUDITORIA_TARIFA con el motivo 'DETECTADO FUERA DE AUDITORIA'
+-- y vuelve a sincronizar la copia. Un job lo ejecuta cada hora.
+CREATE OR REPLACE PROCEDURE sp_verificar_sincronia_tarifa IS
+  v_usr NUMBER; v_n NUMBER := 0;
+BEGIN
+  SELECT NVL(MIN(CASE WHEN login = LOWER(USER) THEN id_usuario END),
+             MIN(CASE WHEN login = 'admin.turismo' THEN id_usuario END))
+    INTO v_usr FROM usuario_sistema;
+  INSERT INTO auditoria_tarifa (id_auditoria,id_tarifa,id_usuario,precio_anterior,precio_nuevo,fecha_cambio,motivo)
+  SELECT seq_auditoria_tarifa.NEXTVAL, t.id_tarifa, v_usr, p.precio_noche, t.precio_noche, SYSDATE,
+         'DETECTADO FUERA DE AUDITORIA (disparador deshabilitado?)'
+  FROM tarifa t JOIN tarifa_precio_previo p ON p.id_tarifa = t.id_tarifa
+  WHERE t.precio_noche <> p.precio_noche;
+  v_n := SQL%ROWCOUNT;
+  UPDATE tarifa_precio_previo p SET precio_noche =
+    (SELECT t.precio_noche FROM tarifa t WHERE t.id_tarifa = p.id_tarifa)
+  WHERE p.precio_noche <> (SELECT t.precio_noche FROM tarifa t WHERE t.id_tarifa = p.id_tarifa);
+  INSERT INTO tarifa_precio_previo SELECT id_tarifa, precio_noche FROM tarifa
+   WHERE id_tarifa NOT IN (SELECT id_tarifa FROM tarifa_precio_previo);
+  DELETE FROM tarifa_precio_previo WHERE id_tarifa NOT IN (SELECT id_tarifa FROM tarifa);
+  COMMIT;
+  DBMS_OUTPUT.PUT_LINE('Cambios sin auditar detectados: ' || v_n);
+END;
+/
+-- Job cada hora
+BEGIN
+  BEGIN
+    DBMS_SCHEDULER.DROP_JOB('JOB_SINCRONIA_TARIFA', force => TRUE);
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLCODE != -27475 THEN RAISE; END IF;  -- -27475: el job no existía
+  END;
+  DBMS_SCHEDULER.CREATE_JOB(
+    job_name => 'JOB_SINCRONIA_TARIFA',
+    job_type => 'STORED_PROCEDURE',
+    job_action => 'SP_VERIFICAR_SINCRONIA_TARIFA',
+    repeat_interval => 'FREQ=HOURLY',
+    enabled => TRUE);
+END;
+/
 
 -- =================================================================================
 -- PARTE 2 - NO SOLAPE DE RESERVAS (disparador a nivel de FILA)
@@ -356,7 +401,7 @@ END;
 /
 
 -- =================================================================================
--- PARTE 4 - COBERTURA DE UPDATE (disparadores compuestos)
+-- PARTE 4 - COBERTURA DE UPDATE (disparadores de sentencia)
 -- ---------------------------------------------------------------------------------
 -- Un disparador de fila no puede leer su propia tabla (ORA-04091). Por eso la cobertura
 -- UPDATE se hace con disparadores AFTER de sentencia: cuando la sentencia termina, la tabla
@@ -475,3 +520,11 @@ SELECT name, line, text
 FROM user_errors
 WHERE type = 'TRIGGER'
 ORDER BY name, sequence;
+
+SELECT name, type, line, text FROM user_errors ORDER BY name, sequence;
+DECLARE v NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v FROM user_objects WHERE status = 'INVALID';
+  IF v > 0 THEN RAISE_APPLICATION_ERROR(-20999, v || ' objeto(s) INVALIDOS'); END IF;
+END;
+/

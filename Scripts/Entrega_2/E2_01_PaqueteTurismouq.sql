@@ -15,7 +15,7 @@
 -- 0. OBJETOS DE APOYO
 -- =======================================================
 SET SERVEROUTPUT ON
-WHENEVER SQLERROR CONTINUE
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
 
 -- 0.1 Secuencias para los ids de RESERVA y RESERVA_HABITACION
 -- Arrancan en MAX+1
@@ -471,5 +471,39 @@ CREATE OR REPLACE PACKAGE BODY pkg_turismouq AS
       END sp_liquidacion_mensual;
 
 END pkg_turismouq;
+/
+
+-- RN1: con MAS de 5 dias de anticipacion al check-in se reembolsa el 80 % de lo pagado
+--      (pagos exitosos); con 5 dias o menos no hay reembolso.
+CREATE OR REPLACE FUNCTION fn_reembolso (
+  p_id_reserva        IN reserva.id_reserva%TYPE,
+  p_fecha_cancelacion IN DATE DEFAULT SYSDATE
+) RETURN NUMBER IS
+  v_checkin reserva.checkin%TYPE;
+  v_pagado  NUMBER;
+BEGIN
+  SELECT checkin INTO v_checkin FROM reserva WHERE id_reserva = p_id_reserva;
+
+  IF TRUNC(v_checkin) - TRUNC(p_fecha_cancelacion) <= 5 THEN
+    RETURN 0;
+  END IF;
+
+  SELECT NVL(SUM(monto), 0) INTO v_pagado
+    FROM pago
+   WHERE id_reserva = p_id_reserva AND estado_pago = 'exitoso';
+
+  RETURN ROUND(v_pagado * 0.80, 2);
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(-20009, 'La reserva ' || p_id_reserva || ' no existe');
+END;
+/
+
+SELECT name, type, line, text FROM user_errors ORDER BY name, sequence;
+DECLARE v NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v FROM user_objects WHERE status = 'INVALID';
+  IF v > 0 THEN RAISE_APPLICATION_ERROR(-20999, v || ' objeto(s) INVALIDOS'); END IF;
+END;
 /
 SHOW ERRORS PACKAGE BODY pkg_turismouq
