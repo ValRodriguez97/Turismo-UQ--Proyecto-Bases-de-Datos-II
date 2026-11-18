@@ -3,7 +3,7 @@ SQL> -- ========================================================================
 SQL> -- 1. ROL_RECEPCION (RECEP_HOTEL): solo vistas de su alojamiento + paquete
 SQL> -- =================================================================================
 SQL> CONNECT recep_hotel/"&clave"@&conexion
-Conectado.
+Error de sintaxis en la columna 20: ""
 SQL> SET SERVEROUTPUT ON
 SQL> 
 SQL> PROMPT === 1a: usuario y rol ===
@@ -12,89 +12,31 @@ SQL> SELECT SYS_CONTEXT('USERENV','SESSION_USER') AS usuario FROM dual;
 
 USUARIO         
 ----------------
-RECEP_HOTEL
+PROYECTO
 
 SQL> SELECT role FROM session_roles WHERE role LIKE 'ROL\_%' ESCAPE '\';
-
-ROLE                    
-------------------------
-ROL_RECEPCION
-
+no se ha seleccionado ninguna fila
 SQL> 
 SQL> PROMPT === 1b: acceso directo a las tablas -> debe dar ORA-00942 (las 3) ===
 === 1b: acceso directo a las tablas -> debe dar ORA-00942 (las 3) ===
 SQL> SELECT COUNT(*) FROM proyecto.reserva;
 
-Error que empieza en la línea: 47 del comando -
-SELECT COUNT(*) FROM proyecto.reserva
-Error en la línea de comandos : 47 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."RESERVA" no existe
+  COUNT(*)
+----------
+     25000
 
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
 SQL> SELECT COUNT(*) FROM proyecto.cliente;
 
-Error que empieza en la línea: 48 del comando -
-SELECT COUNT(*) FROM proyecto.cliente
-Error en la línea de comandos : 48 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."CLIENTE" no existe
+  COUNT(*)
+----------
+      3000
 
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
 SQL> SELECT COUNT(*) FROM proyecto.tarifa;
 
-Error que empieza en la línea: 49 del comando -
-SELECT COUNT(*) FROM proyecto.tarifa
-Error en la línea de comandos : 49 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."TARIFA" no existe
+  COUNT(*)
+----------
+     14637
 
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
 SQL> 
 SQL> PROMPT === 1c: por la vista solo ve su alojamiento (habitaciones y reservas propias) ===
 === 1c: por la vista solo ve su alojamiento (habitaciones y reservas propias) ===
@@ -102,72 +44,39 @@ SQL> SELECT COUNT(*) AS habitaciones FROM proyecto.v_recepcion_habitaciones;
 
 HABITACIONES
 ------------
-           6
+           0
 
 SQL> SELECT COUNT(*) AS reservas_en_vista, COUNT(DISTINCT id_reserva) AS reservas_distintas
   2  FROM proyecto.v_recepcion_reservas;
 
 RESERVAS_EN_VISTA RESERVAS_DISTINTAS
 ----------------- ------------------
-              259                220
+                0                  0
 
 SQL> 
 SQL> PROMPT === 1d: estado de las habitaciones hoy ===
 === 1d: estado de las habitaciones hoy ===
 SQL> SELECT estado_hoy, COUNT(*) AS habitaciones
   2  FROM proyecto.v_recepcion_disponibilidad GROUP BY estado_hoy;
-
-ESTADO_HOY HABITACIONES
----------- ------------
-LIBRE                 5
-OCUPADA               1
-
+no se ha seleccionado ninguna fila
 SQL> 
 SQL> PROMPT === 1e: no puede modificar reservas ni pagos -> ORA-41900 / ORA-01031 ===
 === 1e: no puede modificar reservas ni pagos -> ORA-41900 / ORA-01031 ===
 SQL> UPDATE proyecto.v_recepcion_reservas SET estado = 'cancelada' WHERE id_reserva = 1;
 
-Error que empieza en la línea: 61 del comando -
-UPDATE proyecto.v_recepcion_reservas SET estado = 'cancelada' WHERE id_reserva = 1
-Error en la línea de comandos : 61 Columna : 17
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio UPDATE en "PROYECTO"."V_RECEPCION_RESERVAS"
+0 filas actualizadas.
 
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
 SQL> DELETE FROM proyecto.v_recepcion_pagos;
 
-Error que empieza en la línea: 62 del comando -
-DELETE FROM proyecto.v_recepcion_pagos
-Error en la línea de comandos : 62 Columna : 22
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio DELETE en "PROYECTO"."V_RECEPCION_PAGOS"
+0 filas eliminado
 
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
 SQL> 
 SQL> PROMPT === 1f: SI puede corregir telefono de un cliente de su alojamiento ===
 === 1f: SI puede corregir telefono de un cliente de su alojamiento ===
 SQL> UPDATE proyecto.v_recepcion_clientes SET telefono = '3000000000'
   2  WHERE id_cliente = (SELECT MIN(id_cliente) FROM proyecto.v_recepcion_clientes);
 
-1 fila actualizadas.
+0 filas actualizadas.
 
 SQL> ROLLBACK;
 Rollback terminado.
@@ -205,23 +114,18 @@ SQL> DECLARE
  26    END IF;
  27  END;
  28  /
-Reserva 25026 creada. Valor estadia: 472000
-Reserva creada con el paquete: 25026 (habitacion 71, entrada en +30 dias)
+No se encontro ventana libre: revisar fechas o tarifas.
 
 Procedimiento PL/SQL terminado correctamente.
 SQL> PRINT nueva_reserva
 
 NUEVA_RESERVA
 -------------
-        25026
+
 
 SQL> SELECT id_reserva, estado, checkin, checkout, numero_habitacion
   2  FROM proyecto.v_recepcion_reservas WHERE id_reserva = :nueva_reserva;
-
-ID_RESERVA ESTADO       CHECKIN  CHECKOUT NUMERO_HAB
----------- ------------ -------- -------- ----------
-     25026 pendiente    16/12/26 18/12/26 101       
-
+no se ha seleccionado ninguna fila
 SQL> ROLLBACK;
 Rollback terminado.
 SQL> 
@@ -229,7 +133,7 @@ SQL> -- ========================================================================
 SQL> -- 2. ROL_ADMIN_ALOJAMIENTO (ENC_TIPO1): solo SU alojamiento, WITH CHECK OPTION
 SQL> -- =================================================================================
 SQL> CONNECT enc_tipo1/"&clave"@&conexion
-Conectado.
+Error de sintaxis en la columna 18: ""
 SQL> 
 SQL> PROMPT === 2a: usuario y rol ===
 === 2a: usuario y rol ===
@@ -237,14 +141,10 @@ SQL> SELECT SYS_CONTEXT('USERENV','SESSION_USER') AS usuario FROM dual;
 
 USUARIO         
 ----------------
-ENC_TIPO1
+PROYECTO
 
 SQL> SELECT role FROM session_roles WHERE role LIKE 'ROL\_%' ESCAPE '\';
-
-ROLE                    
-------------------------
-ROL_ADMIN_ALOJAMIENTO
-
+no se ha seleccionado ninguna fila
 SQL> 
 SQL> PROMPT === 2b: solo ve SU alojamiento (debe dar 1 alojamiento distinto) ===
 === 2b: solo ve SU alojamiento (debe dar 1 alojamiento distinto) ===
@@ -252,81 +152,36 @@ SQL> SELECT COUNT(DISTINCT id_alojamiento) AS alojamientos FROM proyecto.v_admin
 
 ALOJAMIENTOS
 ------------
-           1
+           0
 
 SQL> 
 SQL> PROMPT === 2c: acceso directo a tablas -> ORA-00942 ===
 === 2c: acceso directo a tablas -> ORA-00942 ===
 SQL> SELECT COUNT(*) FROM proyecto.habitacion;
 
-Error que empieza en la línea: 119 del comando -
-SELECT COUNT(*) FROM proyecto.habitacion
-Error en la línea de comandos : 119 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."HABITACION" no existe
+  COUNT(*)
+----------
+       697
 
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
 SQL> SELECT COUNT(*) FROM proyecto.cliente;
 
-Error que empieza en la línea: 120 del comando -
-SELECT COUNT(*) FROM proyecto.cliente
-Error en la línea de comandos : 120 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."CLIENTE" no existe
+  COUNT(*)
+----------
+      3000
 
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
 SQL> 
 SQL> PROMPT === 2d: cambia el precio de una tarifa propia (dispara trg_auditoria_tarifa) ===
 === 2d: cambia el precio de una tarifa propia (dispara trg_auditoria_tarifa) ===
 SQL> SELECT id_tarifa, precio_noche FROM proyecto.v_admin_tarifas WHERE ROWNUM <= 2;
-
- ID_TARIFA PRECIO_NOCHE
----------- ------------
-     11173       167000
-     11174       119000
-
+no se ha seleccionado ninguna fila
 SQL> UPDATE proyecto.v_admin_tarifas SET precio_noche = precio_noche + 5000
   2  WHERE id_tarifa = (SELECT MIN(id_tarifa) FROM proyecto.v_admin_tarifas);
 
-1 fila actualizadas.
+0 filas actualizadas.
 
 SQL> SELECT id_tarifa, precio_noche AS precio_nuevo FROM proyecto.v_admin_tarifas
   2  WHERE id_tarifa = (SELECT MIN(id_tarifa) FROM proyecto.v_admin_tarifas);
-
- ID_TARIFA PRECIO_NUEVO
----------- ------------
-     11173       172000
-
+no se ha seleccionado ninguna fila
 SQL> ROLLBACK;
 Rollback terminado.
 SQL> 
@@ -337,31 +192,8 @@ SQL> INSERT INTO proyecto.v_admin_habitaciones
   3  SELECT 999998, id_alojamiento + 1, 'T-99', 2, 'doble', 'prueba otro alojamiento'
   4  FROM proyecto.v_admin_alojamiento;
 
-Error que empieza en la línea: 131 del comando -
-INSERT INTO proyecto.v_admin_habitaciones
-  (id_habitacion, id_alojamiento, numero_habitacion, capacidad_max, tipo, descripcion)
-SELECT 999998, id_alojamiento + 1, 'T-99', 2, 'doble', 'prueba otro alojamiento'
-FROM proyecto.v_admin_alojamiento
-Error en la línea de comandos : 131 Columna : 22
-Informe de error -
-Error SQL: ORA-01402: violación de la cláusula WHERE en la vista WITH CHECK OPTION
+0 filas insertadas.
 
-https://docs.oracle.com/error-help/db/ora-01402/01402. 00000 -  "view WITH CHECK OPTION where-clause violation"
-*Cause:    An INSERT or UPDATE statement was attempted on a view
-           created with the CHECK OPTION. This would have resulted in the
-           creation of a row that would not satisfy the view's WHERE
-           clause.
-*Action:   Examine the view's WHERE clause in the dictionary
-           table VIEWS. If the current view does not have the CHECK
-           OPTION, then its FROM clause must reference a second view that
-           is defined using the CHECK OPTION. The second view's WHERE
-           clause must also be satisfied by any INSERT or UPDATE
-           statements. To insert the row, it may be necessary to insert
-           it directly into the underlying table, rather than through the
-           view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-01402/
 SQL> 
 SQL> PROMPT === 2f: insertar una habitacion en SU alojamiento -> debe aceptarse ===
 === 2f: insertar una habitacion en SU alojamiento -> debe aceptarse ===
@@ -370,7 +202,7 @@ SQL> INSERT INTO proyecto.v_admin_habitaciones
   3  SELECT 999999, id_alojamiento, 'T-98', 2, 'doble', 'prueba mi alojamiento'
   4  FROM proyecto.v_admin_alojamiento;
 
-1 fila insertadas.
+0 filas insertadas.
 
 SQL> ROLLBACK;
 Rollback terminado.
@@ -379,375 +211,5 @@ SQL> PROMPT === 2g: no puede borrar reservas ni pagos -> ORA-41900 / ORA-01031 =
 === 2g: no puede borrar reservas ni pagos -> ORA-41900 / ORA-01031 ===
 SQL> DELETE FROM proyecto.v_admin_reservas;
 
-Error que empieza en la línea: 144 del comando -
-DELETE FROM proyecto.v_admin_reservas
-Error en la línea de comandos : 144 Columna : 22
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio DELETE en "PROYECTO"."V_ADMIN_RESERVAS"
+0 filas eliminado
 
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
-SQL> DELETE FROM proyecto.v_admin_pagos;
-
-Error que empieza en la línea: 145 del comando -
-DELETE FROM proyecto.v_admin_pagos
-Error en la línea de comandos : 145 Columna : 22
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio DELETE en "PROYECTO"."V_ADMIN_PAGOS"
-
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
-SQL> 
-SQL> -- =================================================================================
-SQL> -- 3. ROL_GERENTE (ADMIN_TURISMO): solo reportes de lectura
-SQL> -- =================================================================================
-SQL> CONNECT admin_turismo/"&clave"@&conexion
-Conectado.
-SQL> 
-SQL> PROMPT === 3a: usuario y rol ===
-=== 3a: usuario y rol ===
-SQL> SELECT SYS_CONTEXT('USERENV','SESSION_USER') AS usuario FROM dual;
-
-USUARIO         
-----------------
-ADMIN_TURISMO
-
-SQL> SELECT role FROM session_roles WHERE role LIKE 'ROL\_%' ESCAPE '\';
-
-ROLE                    
-------------------------
-ROL_GERENTE
-
-SQL> 
-SQL> PROMPT === 3b: reportes globales (top 5 por ingreso) ===
-=== 3b: reportes globales (top 5 por ingreso) ===
-SQL> SELECT * FROM (SELECT alojamiento, municipio, ingreso_estadias
-  2              FROM proyecto.v_gerente_ingresos
-  3              ORDER BY ingreso_estadias DESC)
-  4  WHERE ROWNUM <= 5;
-
-ALOJAMIENTO                                                                      MUNICIPIO                                INGRESO_ESTADIAS
--------------------------------------------------------------------------------- ---------------------------------------- ----------------
-Casa Blanca 16                                                                   Montenegro                                     1746764000
-El Triunfo 49                                                                    Quimbaya                                       1712590000
-Villa Lucia 12                                                                   Quimbaya                                       1679659000
-Los Almendros 29                                                                 Salento                                        1633780000
-Las Palmas 45                                                                    Quimbaya                                       1517126000
-
-SQL> 
-SQL> PROMPT === 3c: calificaciones (mejores 5) ===
-=== 3c: calificaciones (mejores 5) ===
-SQL> SELECT * FROM (SELECT alojamiento, resenas, promedio
-  2              FROM proyecto.v_gerente_calificaciones
-  3              ORDER BY promedio DESC NULLS LAST)
-  4  WHERE ROWNUM <= 5;
-
-ALOJAMIENTO                                                                         RESENAS   PROMEDIO
--------------------------------------------------------------------------------- ---------- ----------
-Mirador del Valle 59                                                                     38       4,21
-Villa Hermosa 18                                                                         35        4,2
-El Diamante 32                                                                           61       4,16
-Santa Fe 55                                                                              60        4,1
-El Faro 7                                                                                74       4,07
-
-SQL> 
-SQL> PROMPT === 3d: sin acceso a tablas ni a datos de clientes -> ORA-00942 ===
-=== 3d: sin acceso a tablas ni a datos de clientes -> ORA-00942 ===
-SQL> SELECT COUNT(*) FROM proyecto.cliente;
-
-Error que empieza en la línea: 169 del comando -
-SELECT COUNT(*) FROM proyecto.cliente
-Error en la línea de comandos : 169 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."CLIENTE" no existe
-
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
-SQL> SELECT COUNT(*) FROM proyecto.reserva;
-
-Error que empieza en la línea: 170 del comando -
-SELECT COUNT(*) FROM proyecto.reserva
-Error en la línea de comandos : 170 Columna : 31
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."RESERVA" no existe
-
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
-SQL> 
-SQL> PROMPT === 3e: no puede modificar nada -> ORA-41900 / ORA-01031 ===
-=== 3e: no puede modificar nada -> ORA-41900 / ORA-01031 ===
-SQL> UPDATE proyecto.v_gerente_ingresos SET reservas = 0;
-
-Error que empieza en la línea: 173 del comando -
-UPDATE proyecto.v_gerente_ingresos SET reservas = 0
-Error en la línea de comandos : 173 Columna : 17
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio UPDATE en "PROYECTO"."V_GERENTE_INGRESOS"
-
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
-SQL> 
-SQL> -- =================================================================================
-SQL> -- 4. ROL_AUDITOR (AUDITOR_EXT): lee todo, no modifica y no ve contrasenas
-SQL> -- =================================================================================
-SQL> CONNECT auditor_ext/"&clave"@&conexion
-Conectado.
-SQL> 
-SQL> PROMPT === 4a: usuario y rol ===
-=== 4a: usuario y rol ===
-SQL> SELECT SYS_CONTEXT('USERENV','SESSION_USER') AS usuario FROM dual;
-
-USUARIO         
-----------------
-AUDITOR_EXT
-
-SQL> SELECT role FROM session_roles WHERE role LIKE 'ROL\_%' ESCAPE '\';
-
-ROLE                    
-------------------------
-ROL_AUDITOR
-
-SQL> 
-SQL> PROMPT === 4b: lee las tablas ===
-=== 4b: lee las tablas ===
-SQL> SELECT COUNT(*) AS reservas FROM proyecto.reserva;
-
-  RESERVAS
-----------
-     25000
-
-SQL> SELECT COUNT(*) AS pagos FROM proyecto.pago;
-
-     PAGOS
-----------
-     33574
-
-SQL> 
-SQL> PROMPT === 4c: no puede modificar -> ORA-41900 / ORA-01031 (las 3) ===
-=== 4c: no puede modificar -> ORA-41900 / ORA-01031 (las 3) ===
-SQL> UPDATE proyecto.tarifa SET precio_noche = 1 WHERE id_tarifa = 1;
-
-Error que empieza en la línea: 189 del comando -
-UPDATE proyecto.tarifa SET precio_noche = 1 WHERE id_tarifa = 1
-Error en la línea de comandos : 189 Columna : 17
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio UPDATE en "PROYECTO"."TARIFA"
-
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
-SQL> DELETE FROM proyecto.pago WHERE id_pago = 1;
-
-Error que empieza en la línea: 190 del comando -
-DELETE FROM proyecto.pago WHERE id_pago = 1
-Error en la línea de comandos : 190 Columna : 22
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio DELETE en "PROYECTO"."PAGO"
-
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
-SQL> INSERT INTO proyecto.municipio (id_municipio, nombre) VALUES (9999, 'PRUEBA');
-
-Error que empieza en la línea: 191 del comando -
-INSERT INTO proyecto.municipio (id_municipio, nombre) VALUES (9999, 'PRUEBA')
-Error en la línea de comandos : 191 Columna : 22
-Informe de error -
-Error SQL: ORA-41900: Falta el privilegio INSERT en "PROYECTO"."MUNICIPIO"
-
-https://docs.oracle.com/error-help/db/ora-41900/41900. 00000 -  "missing %s privilege on \"%s\".\"%s\""
-*Cause:    An attempt was made to operate on an object for which the user did
-           not have the required privilege.
-*Action:   Perform the action after acquiring the required privileges.
-*Params:   1) privilege
-           2) owner_name: The name of the owner.
-           3) object_name: The name of the object.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-41900/
-SQL> 
-SQL> PROMPT === 4d: no ve contrasenas: tabla -> ORA-00942; vista -> sin columna contrasena ===
-=== 4d: no ve contrasenas: tabla -> ORA-00942; vista -> sin columna contrasena ===
-SQL> SELECT contrasena FROM proyecto.usuario_sistema;
-
-Error que empieza en la línea: 194 del comando -
-SELECT contrasena FROM proyecto.usuario_sistema
-Error en la línea de comandos : 194 Columna : 33
-Informe de error -
-Error SQL: ORA-00942: La tabla o vista  "PROYECTO"."USUARIO_SISTEMA" no existe
-
-https://docs.oracle.com/error-help/db/ora-00942/00942. 00000 -  "table or view%s does not exist"
-*Cause:    The specified table or view did not exist, or a synonym
-           pointed to a table or view that did not exist.
-           To find existing user tables and views, query the
-           ALL_TABLES and ALL_VIEWS data dictionary views. Certain
-           privileges may be required to access the table. If an
-           application returned this message, then the table that the
-           application tried to access did not exist in the database, or
-           the application did not have access to it.
-*Action:   Check each of the following
-           - The spelling of the table or view name is correct.
-           - The referenced table or view name does exist.
-           - The synonym points to an existing table or view.
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-00942/
-SQL> SELECT login, rol, estado FROM proyecto.v_auditor_usuarios;
-
-LOGIN                          ROL                       ESTADO    
------------------------------- ------------------------- ----------
-admin.turismo                  gerente                   activo    
-auditor.ext                    auditor                   activo    
-enc.tipo1                      admin_alojamiento         activo    
-enc.tipo2                      admin_alojamiento         activo    
-enc.tipo3                      admin_alojamiento         activo    
-enc.tipo4                      admin_alojamiento         activo    
-enc.extra1                     admin_alojamiento         activo    
-enc.extra2                     admin_alojamiento         activo    
-enc.extra3                     admin_alojamiento         activo    
-recep.hotel                    recepcion                 activo    
-
-10 filas seleccionadas. 
-
-SQL> 
-SQL> -- =================================================================================
-SQL> -- 5. PERFIL (como SYSTEM): limites definidos y a quien se aplican
-SQL> -- =================================================================================
-SQL> CONNECT system/"&clave_system"@&conexion
-Conectado.
-SQL> 
-SQL> COLUMN resource_name FORMAT A26
-SQL> COLUMN limit FORMAT A14
-SQL> COLUMN username FORMAT A16
-SQL> COLUMN profile FORMAT A18
-SQL> COLUMN account_status FORMAT A16
-SQL> 
-SQL> PROMPT === 5a: limites del perfil (deben ser 10) ===
-=== 5a: limites del perfil (deben ser 10) ===
-SQL> SELECT resource_name, limit FROM dba_profiles
-  2  WHERE profile = 'PERFIL_TURISMOUQ' AND limit <> 'DEFAULT'
-  3  ORDER BY resource_type, resource_name;
-
-RESOURCE_NAME              LIMIT         
--------------------------- --------------
-CONNECT_TIME               480           
-CPU_PER_CALL               6000          
-IDLE_TIME                  15            
-LOGICAL_READS_PER_CALL     100000        
-SESSIONS_PER_USER          2             
-FAILED_LOGIN_ATTEMPTS      3             
-PASSWORD_LIFE_TIME         90            
-PASSWORD_LOCK_TIME         ,0416         
-PASSWORD_REUSE_MAX         UNLIMITED     
-PASSWORD_REUSE_TIME        180           
-
-10 filas seleccionadas. 
-
-SQL> 
-SQL> PROMPT === 5b: usuarios con el perfil ===
-=== 5b: usuarios con el perfil ===
-SQL> SELECT username, profile, account_status FROM dba_users
-  2  WHERE profile = 'PERFIL_TURISMOUQ' ORDER BY username;
-
-USERNAME         PROFILE            ACCOUNT_STATUS  
----------------- ------------------ ----------------
-ADMIN_TURISMO    PERFIL_TURISMOUQ   OPEN            
-AUDITOR_EXT      PERFIL_TURISMOUQ   OPEN            
-ENC_EXTRA1       PERFIL_TURISMOUQ   OPEN            
-ENC_EXTRA2       PERFIL_TURISMOUQ   OPEN            
-ENC_EXTRA3       PERFIL_TURISMOUQ   OPEN            
-ENC_TIPO1        PERFIL_TURISMOUQ   OPEN            
-ENC_TIPO2        PERFIL_TURISMOUQ   OPEN            
-ENC_TIPO3        PERFIL_TURISMOUQ   OPEN            
-ENC_TIPO4        PERFIL_TURISMOUQ   OPEN            
-RECEP_HOTEL      PERFIL_TURISMOUQ   OPEN            
-
-10 filas seleccionadas. 
-
-SQL> 
-SQL> PROMPT === 5c: RESOURCE_LIMIT debe estar en TRUE para que apliquen los limites ===
-=== 5c: RESOURCE_LIMIT debe estar en TRUE para que apliquen los limites ===
-SQL> SELECT name, value FROM v$parameter WHERE name = 'resource_limit';
-
-NAME
---------------------------------------------------------------------------------
-VALUE                                                                                                                                                 
-------------------------------------------------------------------------------------------------------------------------------------------------------
-resource_limit                                                                   
-TRUE                                                                                                                                                  
-
-
-SQL> 
-SQL> -- =================================================================================
-SQL> -- La prueba real del perfil (bloqueo por intentos fallidos y limite de sesiones)
-SQL> -- necesita conexiones que fallan y ventanas abiertas a la vez, asi que se hace paso
-SQL> -- a paso en E3_04d_Prueba_Perfil.sql.
-SQL> -- =================================================================================
-SQL> 
-SQL> SPOOL OFF

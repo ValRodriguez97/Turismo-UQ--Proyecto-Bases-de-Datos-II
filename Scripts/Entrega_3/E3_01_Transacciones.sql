@@ -61,7 +61,6 @@ BEGIN
   EXECUTE IMMEDIATE 'CREATE SEQUENCE seq_pago START WITH ' || v_n || ' INCREMENT BY 1 NOCACHE';
 END;
 /
-
 -- =================================================================================
 -- PARTE 2 - PROCEDIMIENTO sp_crear_reserva_segura
 -- ---------------------------------------------------------------------------------
@@ -133,7 +132,6 @@ BEGIN
 END sp_crear_reserva_segura;
 /
 SHOW ERRORS PROCEDURE sp_crear_reserva_segura
-
 -- =================================================================================
 -- PARTE 3 - PROCEDIMIENTO sp_reservar_y_pagar
 -- ---------------------------------------------------------------------------------
@@ -576,6 +574,8 @@ SELECT (SELECT COUNT(*) FROM reserva) AS reservas,
 FROM dual;
 
 SELECT name, type, line, text FROM user_errors ORDER BY name, sequence;
+ALTER MATERIALIZED VIEW mv_ocupacion_mensual COMPILE;
+EXEC DBMS_MVIEW.REFRESH('MV_OCUPACION_MENSUAL', 'C', atomic_refresh => FALSE);
 DECLARE v NUMBER;
 BEGIN
   SELECT COUNT(*) INTO v FROM user_objects WHERE status = 'INVALID';

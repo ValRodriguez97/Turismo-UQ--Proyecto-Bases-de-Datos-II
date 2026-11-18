@@ -23,31 +23,31 @@ Procedimiento PL/SQL terminado correctamente.
      25000      29450      33574
 
 === T1: exitoso con anticipo del 30 % ===
-Reserva 25020 creada. Valor estadia: 246000
-Pago 33575 registrado por 73800. Reserva 25020 confirmada.
-Anticipo recibido: pagado 73800 de 246000. Saldo pendiente: 172200.
-T1 -> reserva 25020, pago 33575 OK
+Reserva 25073 creada. Valor estadia: 262000
+Pago 33575 registrado por 78600. Reserva 25073 confirmada.
+Anticipo recibido: pagado 78600 de 262000. Saldo pendiente: 183400.
+T1 -> reserva 25073, pago 33575 OK
 
 Procedimiento PL/SQL terminado correctamente.
 === T2: exitoso con pago total ===
-Reserva 25021 creada. Valor estadia: 246000
-Pago 33576 registrado por 246000. Reserva 25021 confirmada.
-Reserva PAGADA: los pagos exitosos (246000) cubren el total (246000).
-T2 -> reserva 25021, pago 33576 OK
+Reserva 25074 creada. Valor estadia: 262000
+Pago 33576 registrado por 262000. Reserva 25074 confirmada.
+Reserva PAGADA: los pagos exitosos (262000) cubren el total (262000).
+T2 -> reserva 25074, pago 33576 OK
 
 Procedimiento PL/SQL terminado correctamente.
 === T3: rollback parcial (el pago excede el total) ===
-Reserva 25022 creada. Valor estadia: 246000
-El pago no se registro: ORA-20031: El pago excede el total de la reserva: pagado 2460000, total 246000
-ROLLBACK TO reserva_creada: la reserva 25022 se conserva en estado pendiente.
-T3 -> reserva 25022, pago NULL OK
+Reserva 25075 creada. Valor estadia: 262000
+El pago no se registro: ORA-20031: El pago excede el total de la reserva: pagado 2620000, total 262000
+ROLLBACK TO reserva_creada: la reserva 25075 se conserva en estado pendiente.
+T3 -> reserva 25075, pago NULL OK
 
 Procedimiento PL/SQL terminado correctamente.
 === T4: rollback parcial (metodo de pago invalido) ===
-Reserva 25023 creada. Valor estadia: 246000
+Reserva 25076 creada. Valor estadia: 262000
 El pago no se registro: ORA-20032: Metodo de pago invalido: bitcoin
-ROLLBACK TO reserva_creada: la reserva 25023 se conserva en estado pendiente.
-T4 -> reserva 25023, pago NULL OK
+ROLLBACK TO reserva_creada: la reserva 25076 se conserva en estado pendiente.
+T4 -> reserva 25076, pago NULL OK
 
 Procedimiento PL/SQL terminado correctamente.
 === Resumen T1 a T4 (despues de un ROLLBACK que no deshace nada) ===
@@ -55,10 +55,10 @@ Rollback terminado.
 
 ID_RESERVA ESTADO            TOTAL      PAGOS     PAGADO SITUACION   
 ---------- ------------ ---------- ---------- ---------- ------------
-     25020 confirmada       246000          1      73800 CON SALDO   
-     25021 confirmada       246000          1     246000 PAGADA      
-     25022 pendiente        246000          0          0 CON SALDO   
-     25023 pendiente        246000          0          0 CON SALDO   
+     25073 confirmada       262000          1      78600 CON SALDO   
+     25074 confirmada       262000          1     262000 PAGADA      
+     25075 pendiente        262000          0          0 CON SALDO   
+     25076 pendiente        262000          0          0 CON SALDO   
 
 === T5: rollback total (la reserva falla, no queda nada) ===
 T5 -> OK (esperado): ORA-20002: Habitacion no disponible: esta ocupada entre 02/12/2026 y 04/12/2026
@@ -70,25 +70,25 @@ Procedimiento PL/SQL terminado correctamente.
      25004      29454      33576
 
 === T6: rollback parcial (monto invalido) ===
-Reserva 25024 creada. Valor estadia: 246000
+Reserva 25077 creada. Valor estadia: 262000
 El pago no se registro: ORA-20030: Monto invalido: el pago debe ser mayor que cero
-ROLLBACK TO reserva_creada: la reserva 25024 se conserva en estado pendiente.
-T6 -> reserva 25024, pago NULL OK
+ROLLBACK TO reserva_creada: la reserva 25077 se conserva en estado pendiente.
+T6 -> reserva 25077, pago NULL OK
 
 Procedimiento PL/SQL terminado correctamente.
 
 ID_RESERVA ESTADO            PAGOS
 ---------- ------------ ----------
-     25024 pendiente             0
+     25077 pendiente             0
 
 === D1: crear la reserva (queda pendiente, sin COMMIT) ===
-Reserva 25025 creada. Valor estadia: 246000
+Reserva 25078 creada. Valor estadia: 262000
 
 Procedimiento PL/SQL terminado correctamente.
 
 ID_RESERVA ESTADO            PAGOS
 ---------- ------------ ----------
-     25025 pendiente             0
+     25078 pendiente             0
 
 === D2: punto de guardado ===
 
@@ -104,14 +104,14 @@ Savepoint creado.
 
 ID_RESERVA ESTADO            PAGOS TOTAL_PAGADO
 ---------- ------------ ---------- ------------
-     25025 confirmada            1      5000000
+     25078 confirmada            1      5000000
 
 === D4: ROLLBACK TO reserva_creada (rollback parcial) ===
 Rollback terminado.
 
 ID_RESERVA ESTADO            PAGOS
 ---------- ------------ ----------
-     25025 pendiente             0
+     25078 pendiente             0
 
 === D5: ROLLBACK (rollback total): la reserva de la demostracion desaparece (0) ===
 Rollback terminado.
@@ -138,16 +138,8 @@ Confirmación terminada.
      25000      29450      33574
 
 no se ha seleccionado ninguna fila
-Rollback
-DECLARE v NUMBER;
-*
-ERROR en la línea 1:
-ORA-20999: 1 objeto(s) INVALIDOS
-ORA-06512: en línea 4
 
-https://docs.oracle.com/error-help/db/ora-20999/
+Materialized view MV_OCUPACION_MENSUAL alterado.
 
-
-More Details :
-https://docs.oracle.com/error-help/db/ora-20999/
-https://docs.oracle.com/error-help/db/ora-06512/
+Procedimiento PL/SQL terminado correctamente.
+Procedimiento PL/SQL terminado correctamente.
